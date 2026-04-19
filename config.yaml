@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────────────────────────
+# Portfolio Tracker — Configuración
+# ──────────────────────────────────────────────────────────────────
+
+# Tickers a seguir. Cualquier símbolo que soporte Yahoo Finance:
+# Acciones: AAPL, TSLA, NVDA, MSFT, META, BABA, MU, AMZN...
+# ETFs:     SPY, QQQ, GLD, TLT...
+# Crypto:   BTC-USD, ETH-USD...
+# Índices:  ^GSPC, ^IXIC, ^DJI...
+tickers:
+  - NVDA
+  - MSFT
+  - META
+  - BABA
+  # Añade los tuyos aquí:
+  # - AAPL
+  # - MU
+  # - GOOGL
+  # - TSLA
+
+# Zona horaria para el timestamp del mensaje
+# Lista completa: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+timezone: "Europe/Madrid"
+
+# ──────────────────────────────────────────────────────────────────
+# ELECCIÓN DE MODELO (precios de abril 2026)
+# ──────────────────────────────────────────────────────────────────
+#
+#  claude-sonnet-4-6  → $3/$15 por M tokens  ← RECOMENDADO
+#    Análisis excelente, rápido (~15s), ~$1/mes para esta app
+#
+#  claude-opus-4-6    → $5/$25 por M tokens
+#    Máxima capacidad de razonamiento, ~$1.65/mes para esta app
+#    Diferencia de calidad mínima para datos financieros estructurados
+#
+#  claude-haiku-4-5   → $1/$5 por M tokens
+#    Muy barato (~$0.30/mes) pero análisis menos profundo
+# ──────────────────────────────────────────────────────────────────
+model: "claude-sonnet-4-6"
