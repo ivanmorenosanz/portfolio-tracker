@@ -384,4 +384,71 @@ def format_message(stocks, analyses, market, tz_name):
     return "\n".join(lines)
 
 def send_telegram(text, token, chat_id):
-    url = f"https://api.telegra
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    chunks = [text[i:i+4000] for i in range(0,len(text),4000)]
+    for i, chunk in enumerate(chunks):
+        try:
+            r = httpx.post(url, json={"chat_id":chat_id,"text":chunk,"parse_mode":"HTML","disable_web_page_preview":True}, timeout=20)
+            r.raise_for_status()
+            log.info(f"Telegram: chunk {i+1}/{len(chunks)} ✓")
+        except Exception as e:
+            log.error(f"Telegram error: {e}")
+            return False
+        if i < len(chunks)-1: time.sleep(1)
+    return True
+
+def notify_error(message, token, chat_id):
+    send_telegram(f"⚠️ <b>Portfolio Tracker — Error</b>\n\n{message}\n\n<i>Revisa los logs en la RPi.</i>", token, chat_id)
+
+def run(config_path="config.yaml"):
+    cfg = load_config(config_path)
+    tickers = cfg["tickers"]
+    tz_name = cfg.get("timezone","Europe/Madrid")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
+
+    missing = [k for k,v in {"ANTHROPIC_API_KEY":os.environ.get("ANTHROPIC_API_KEY"),"TELEGRAM_BOT_TOKEN":token,"TELEGRAM_CHAT_ID":chat_id}.items() if not v]
+    if missing:
+        msg = f"Variables faltantes: {', '.join(missing)}"
+        log.error(msg)
+        if token and chat_id: notify_error(msg, token, chat_id)
+        return False
+
+    try:
+        log.info("="*50)
+        log.info(f"Iniciando · {date.today()} · {len(tickers)} tickers")
+        log.info("="*50)
+
+        log.info("Paso 1/4: Mercado global...")
+        market = fetch_market_context()
+        log.info(f"  → {len(market)} índices")
+
+        log.info("Paso 2/4: Datos de tickers (60d histórico + fundamentales)...")
+        stocks = []
+        for tk in tickers:
+            stocks.append(fetch_stock(tk))
+            time.sleep(0.5)
+        valid = [s for s in stocks if "error" not in s]
+        log.info(f"  → {len(valid)}/{len(tickers)} válidos")
+
+        log.info("Paso 3/4: Noticias recientes...")
+        news = fetch_news([s["ticker"] for s in valid], max_per_ticker=5)
+
+        log.info("Paso 4/4: Análisis profundo con Claude...")
+        analyses = generate_analysis(stocks, market, cfg, news=news)
+        log.info(f"  → {len(analyses)} análisis generados")
+
+        message = format_message(stocks, analyses, market, tz_name)
+        success = send_telegram(message, token, chat_id)
+        log.info("✅ Informe enviado" if success else "❌ Error al enviar")
+        return success
+
+    except Exception as e:
+        msg = f"Error: {type(e).__name__}: {e}"
+        log.exception(msg)
+        notify_error(msg, token, chat_id)
+        return False
+
+if __name__ == "__main__":
+    config_arg = sys.argv[1] if len(sys.argv)>1 else "config.yaml"
+    sys.exit(0 if run(config_arg) else 1)
