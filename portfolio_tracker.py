@@ -1,550 +1,387 @@
 #!/usr/bin/env python3
 """
-Daily Portfolio Tracker — v2 (RPi Edition)
-────────────────────────────────────────────────────────────────────
-Cambios respecto a v1:
-  • Análisis exhaustivo con web_search activado en Claude API
-  • Validación de datos: rechaza datos si precio es 0 o None
-  • Fuente de datos secundaria (financedatasets.ai) como fallback
-  • Compatibilidad verificada con ARM64 (RPi 4B)
-  • Mensaje Telegram más rico con contexto macro y señales técnicas
-────────────────────────────────────────────────────────────────────
+Daily Portfolio Tracker — Agente de Inversiones Profesional
 """
-
-import json
-import logging
-import os
-import sys
-import time
+import json, logging, os, sys, time
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-import anthropic
-import httpx
-import yaml
-import yfinance as yf
+import anthropic, httpx, yaml, yfinance as yf
 from dotenv import load_dotenv
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(message)s",
-    datefmt="%H:%M:%S",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)-8s  %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-
-# ─── Config ──────────────────────────────────────────────────────────────────
-
-def load_config(path: str = "config.yaml") -> dict:
-    with open(path) as f:
-        cfg = yaml.safe_load(f)
-    log.info(f"Config cargado · tickers: {cfg['tickers']} · modelo: {cfg.get('model')}")
+def load_config(path="config.yaml"):
+    with open(path) as f: cfg = yaml.safe_load(f)
+    log.info(f"Config · tickers: {cfg['tickers']} · modelo: {cfg.get('model')}")
     return cfg
 
-
-# ─── Data Fetching ────────────────────────────────────────────────────────────
-
-def fetch_stock(ticker: str, retries: int = 4) -> dict:
-    """
-    Obtiene datos de yfinance con reintentos y validación estricta.
-    Rechaza explícitamente datos con precio 0 o None (datos desactualizados).
-    """
-    for attempt in range(1, retries + 1):
-        try:
-            t    = yf.Ticker(ticker)
-            info = t.info
-            hist = t.history(period="10d")  # 10d para tener más contexto
-
-            if hist.empty:
-                raise ValueError("Historial de precios vacío")
-
-            current = float(hist["Close"].iloc[-1])
-            if current <= 0:
-                raise ValueError(f"Precio inválido: {current}")
-
-            prev     = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current
-            chg_abs  = round(current - prev, 2)
-            chg_pct  = round((chg_abs / prev) * 100, 2) if prev else 0.0
-
-            # Media móvil 20 días (si tenemos suficiente historial)
-            sma20 = None
-            if len(hist) >= 10:
-                sma20 = round(hist["Close"].tail(10).mean(), 2)
-
-            # Ratio de volumen vs media (señal de actividad inusual)
-            vol       = info.get("volume") or info.get("regularMarketVolume", 0)
-            avg_vol   = info.get("averageVolume", 0)
-            vol_ratio = round(vol / avg_vol, 2) if avg_vol and avg_vol > 0 else None
-
-            # Distancia al máximo y mínimo de 52 semanas (%)
-            high52 = info.get("fiftyTwoWeekHigh")
-            low52  = info.get("fiftyTwoWeekLow")
-            pct_from_high = round(((current - high52) / high52) * 100, 1) if high52 else None
-            pct_from_low  = round(((current - low52)  / low52)  * 100, 1) if low52  else None
-
-            result = {
-                "ticker":         ticker,
-                "short_name":     info.get("shortName", ticker),
-                "sector":         info.get("sector", ""),
-                "industry":       info.get("industry", ""),
-                "price":          round(current, 2),
-                "prev_close":     round(prev, 2),
-                "change_abs":     chg_abs,
-                "change_pct":     chg_pct,
-                "sma10":          sma20,  # 10-day avg (limited by history period)
-                "volume":         vol,
-                "avg_volume":     avg_vol,
-                "vol_ratio":      vol_ratio,
-                "market_cap_b":   round((info.get("marketCap", 0) or 0) / 1e9, 1),
-                "pe_ttm":         info.get("trailingPE"),
-                "pe_fwd":         info.get("forwardPE"),
-                "peg":            info.get("pegRatio"),
-                "eps_ttm":        info.get("trailingEps"),
-                "revenue_b":      round((info.get("totalRevenue", 0) or 0) / 1e9, 1),
-                "revenue_growth": info.get("revenueGrowth"),
-                "gross_margins":  info.get("grossMargins"),
-                "operating_margins": info.get("operatingMargins"),
-                "profit_margins": info.get("profitMargins"),
-                "roe":            info.get("returnOnEquity"),
-                "debt_equity":    info.get("debtToEquity"),
-                "current_ratio":  info.get("currentRatio"),
-                "free_cashflow_b": round((info.get("freeCashflow", 0) or 0) / 1e9, 2),
-                "high_52w":       high52,
-                "low_52w":        low52,
-                "pct_from_high":  pct_from_high,
-                "pct_from_low":   pct_from_low,
-                "target_mean":    info.get("targetMeanPrice"),
-                "target_high":    info.get("targetHighPrice"),
-                "target_low":     info.get("targetLowPrice"),
-                "analyst_count":  info.get("numberOfAnalystOpinions", 0),
-                "recommendation": info.get("recommendationKey", "n/a"),
-                "beta":           info.get("beta"),
-                "dividend_yield": info.get("dividendYield"),
-                "ex_dividend_date": str(info.get("exDividendDate", "")),
-                "next_earnings_date": str(info.get("earningsDate", [""])[0]) if info.get("earningsDate") else "",
-            }
-
-            log.info(f"{ticker} ✓  ${result['price']}  {'+' if chg_pct >= 0 else ''}{chg_pct}%")
-            return result
-
-        except Exception as exc:
-            log.warning(f"{ticker} intento {attempt}/{retries}: {exc}")
-            if attempt < retries:
-                wait = 2 ** attempt  # 2s, 4s, 8s
-                log.info(f"Esperando {wait}s antes de reintentar...")
-                time.sleep(wait)
-
-    log.error(f"{ticker}: todos los intentos fallaron")
-    return {"ticker": ticker, "error": "datos no disponibles"}
-
-
-def fetch_market_context() -> dict:
-    """Obtiene índices, VIX, oro y bono 10Y con validación."""
-    symbols = {
-        "S&P 500": "^GSPC",
-        "Nasdaq":  "^IXIC",
-        "Dow":     "^DJI",
-        "VIX":     "^VIX",
-        "Gold":    "GC=F",
-        "Crude Oil": "CL=F",
-        "10Y Yield": "^TNX",
-        "USD/EUR": "EURUSD=X",
-    }
+def fetch_market_context():
+    symbols = {"S&P 500":"^GSPC","Nasdaq":"^IXIC","Dow":"^DJI","VIX":"^VIX","Gold":"GC=F","Crude Oil":"CL=F","10Y Yield":"^TNX","USD/EUR":"EURUSD=X"}
     ctx = {}
     for name, sym in symbols.items():
         try:
             hist = yf.Ticker(sym).history(period="2d")
-            if hist.empty or float(hist["Close"].iloc[-1]) <= 0:
-                continue
+            if hist.empty: continue
             curr = float(hist["Close"].iloc[-1])
             prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else curr
-            ctx[name] = {
-                "value":      round(curr, 2),
-                "change_pct": round(((curr - prev) / prev) * 100, 2) if prev else 0.0,
-            }
-        except Exception as exc:
-            log.warning(f"Contexto mercado {sym}: {exc}")
+            if curr <= 0: continue
+            ctx[name] = {"value": round(curr,2), "change_pct": round(((curr-prev)/prev)*100,2) if prev else 0.0}
+        except Exception as e: log.warning(f"Mercado {sym}: {e}")
     return ctx
 
+def fetch_stock(ticker, retries=4):
+    for attempt in range(1, retries+1):
+        try:
+            t = yf.Ticker(ticker)
+            info = t.info
+            hist = t.history(period="60d")
+            if hist.empty: raise ValueError("Historial vacío")
+            current = float(hist["Close"].iloc[-1])
+            if current <= 0: raise ValueError(f"Precio inválido: {current}")
+            prev = float(hist["Close"].iloc[-2]) if len(hist)>1 else current
+            chg_pct = round(((current-prev)/prev)*100,2) if prev else 0.0
+            sma20 = round(hist["Close"].tail(20).mean(),2) if len(hist)>=20 else None
+            sma50 = round(hist["Close"].tail(50).mean(),2) if len(hist)>=50 else None
+            vol = info.get("volume") or info.get("regularMarketVolume",0)
+            avg_vol = info.get("averageVolume",0)
+            vol_ratio = round(vol/avg_vol,2) if avg_vol and avg_vol>0 else None
+            high52 = info.get("fiftyTwoWeekHigh")
+            low52 = info.get("fiftyTwoWeekLow")
+            earnings_dates = info.get("earningsDate")
+            next_earnings = ""
+            if earnings_dates:
+                if isinstance(earnings_dates,(list,tuple)) and len(earnings_dates)>0: next_earnings = str(earnings_dates[0])
+                else: next_earnings = str(earnings_dates)
+            result = {
+                "ticker": ticker, "short_name": info.get("shortName",ticker),
+                "sector": info.get("sector",""), "industry": info.get("industry",""), "country": info.get("country",""),
+                "price": round(current,2), "prev_close": round(prev,2), "change_pct": chg_pct,
+                "sma20": sma20, "sma50": sma50,
+                "above_sma20": (current>sma20) if sma20 else None,
+                "above_sma50": (current>sma50) if sma50 else None,
+                "vol_ratio": vol_ratio,
+                "high_52w": high52, "low_52w": low52,
+                "pct_from_high": round(((current-high52)/high52)*100,1) if high52 else None,
+                "pct_from_low": round(((current-low52)/low52)*100,1) if low52 else None,
+                "market_cap_b": round((info.get("marketCap",0) or 0)/1e9,1),
+                "enterprise_val_b": round((info.get("enterpriseValue",0) or 0)/1e9,1),
+                "pe_ttm": info.get("trailingPE"), "pe_fwd": info.get("forwardPE"),
+                "peg": info.get("pegRatio"), "ps_ratio": info.get("priceToSalesTrailing12Months"),
+                "pb_ratio": info.get("priceToBook"), "ev_ebitda": info.get("enterpriseToEbitda"),
+                "ev_revenue": info.get("enterpriseToRevenue"),
+                "revenue_b": round((info.get("totalRevenue",0) or 0)/1e9,2),
+                "revenue_growth": info.get("revenueGrowth"), "earnings_growth": info.get("earningsGrowth"),
+                "gross_margins": info.get("grossMargins"), "operating_margins": info.get("operatingMargins"),
+                "profit_margins": info.get("profitMargins"), "roe": info.get("returnOnEquity"),
+                "roa": info.get("returnOnAssets"), "debt_equity": info.get("debtToEquity"),
+                "current_ratio": info.get("currentRatio"),
+                "fcf_b": round((info.get("freeCashflow",0) or 0)/1e9,2),
+                "cash_b": round((info.get("totalCash",0) or 0)/1e9,2),
+                "target_mean": info.get("targetMeanPrice"), "target_high": info.get("targetHighPrice"),
+                "target_low": info.get("targetLowPrice"), "analyst_count": info.get("numberOfAnalystOpinions",0),
+                "recommendation": info.get("recommendationKey","n/a"),
+                "beta": info.get("beta"), "dividend_yield": info.get("dividendYield"),
+                "next_earnings": next_earnings, "short_ratio": info.get("shortRatio"),
+                "institutional_pct": info.get("heldPercentInstitutions"),
+            }
+            log.info(f"  {ticker} ✓  ${result['price']}  {'+' if chg_pct>=0 else ''}{chg_pct}%")
+            return result
+        except Exception as exc:
+            log.warning(f"  {ticker} intento {attempt}/{retries}: {exc}")
+            if attempt < retries: time.sleep(2**attempt)
+    log.error(f"  {ticker}: todos los intentos fallaron")
+    return {"ticker": ticker, "error": "datos no disponibles"}
 
-# ─── Claude Analysis con Web Search ──────────────────────────────────────────
+def fetch_news(tickers, max_per_ticker=5):
+    result = {}
+    now_ts = time.time()
+    for tk in tickers:
+        try:
+            raw_news = yf.Ticker(tk).news or []
+            items = []
+            for art in raw_news[:max_per_ticker]:
+                pub_ts = art.get("content",{}).get("pubDate") or art.get("providerPublishTime",0)
+                if isinstance(pub_ts,str):
+                    try:
+                        dt = datetime.fromisoformat(pub_ts.replace("Z","+00:00"))
+                        pub_ts = dt.timestamp()
+                    except: pub_ts = 0
+                age_h = round((now_ts-float(pub_ts))/3600,1) if pub_ts else None
+                title = art.get("content",{}).get("title") or art.get("title","")
+                publisher = art.get("content",{}).get("provider",{}).get("displayName") or art.get("publisher","")
+                if title: items.append({"title":title,"publisher":publisher,"age_hours":age_h})
+            result[tk] = items
+            log.info(f"  Noticias {tk}: {len(items)} artículos")
+        except Exception as e:
+            log.warning(f"  Noticias {tk}: {e}")
+            result[tk] = []
+    return result
 
-def generate_analysis(stocks: list[dict], market: dict, cfg: dict) -> list[dict]:
-    """
-    Llama a Claude con web_search activado para análisis exhaustivo y actualizado.
-    Claude puede buscar noticias recientes, earnings dates, y catalizadores actuales.
-    """
+SYSTEM_PROMPT = """Eres un gestor de carteras senior con 20 años de experiencia en renta variable global.
+Tu especialidad es el análisis fundamental profundo combinado con contexto macroeconómico.
+Tu único objetivo es maximizar el retorno ajustado al riesgo para el inversor.
+
+PRINCIPIOS INQUEBRANTABLES:
+1. Sé brutalmente honesto — ni optimismo gratuito ni pesimismo injustificado
+2. Cada recomendación debe estar respaldada por datos concretos de los proporcionados
+3. Distingue claramente entre certezas y probabilidades
+4. El riesgo importa tanto como el retorno potencial
+5. Una recomendación vaga no tiene valor — sé específico y accionable
+6. Nunca inventes datos, fechas o noticias que no estén en los datos proporcionados"""
+
+def generate_analysis(stocks, market, cfg, news=None):
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    model  = cfg.get("model", "claude-sonnet-4-6")
-
+    model = cfg.get("model","claude-sonnet-4-6")
     valid = [s for s in stocks if "error" not in s]
-    if not valid:
-        log.error("Sin datos válidos para analizar")
-        return []
+    if not valid: return []
+    today = date.today().strftime("%A, %d de %B de %Y")
 
-    today     = date.today().strftime("%A, %d de %B de %Y")
-    tickers   = [s["ticker"] for s in valid]
+    news_block = ""
+    if news:
+        lines = []
+        for tk, articles in news.items():
+            if not articles: lines.append(f"  {tk}: sin titulares"); continue
+            lines.append(f"  {tk}:")
+            for a in articles:
+                age = f"{a['age_hours']}h" if a.get("age_hours") is not None else "?"
+                lines.append(f"    [{age}] {a['title']}  ({a['publisher']})")
+        news_block = "\n\nNOTICIAS RECIENTES (Yahoo Finance):\n" + "\n".join(lines)
 
-    system = """Eres un analista de renta variable profesional con acceso a búsqueda web en tiempo real.
-Tu objetivo es producir análisis EXHAUSTIVOS, CONFIRMADOS y ACTUALIZADOS.
-
-Reglas estrictas:
-- USA web_search para confirmar noticias del día y catalizadores recientes de cada ticker
-- NUNCA incluyas información no confirmada o que no puedas verificar
-- Si no encuentras información reciente de un ticker, indícalo explícitamente
-- Sé directo y accionable — sin frases vacías ni relleno
-- La calidad y veracidad superan a la brevedad"""
-
-    user = f"""Fecha de hoy: {today}
-
-DATOS EN TIEMPO REAL DE MI CARTERA:
-{json.dumps(valid, indent=2, ensure_ascii=False)}
-
-CONTEXTO MACRO:
-{json.dumps(market, indent=2, ensure_ascii=False)}
-
-INSTRUCCIONES:
-1. Usa web_search para buscar noticias de HOY o de los últimos 2 días para: {', '.join(tickers)}
-2. Busca específicamente: earnings recientes, upgrades/downgrades de analistas, cambios regulatorios, M&A, y cualquier catalizador relevante
-3. Confirma si hay fechas de earnings próximas para algún ticker
-
-Devuelve ÚNICAMENTE un array JSON válido — sin markdown, sin texto previo ni posterior.
-Schema estricto por cada elemento:
-{{
-  "ticker":          "TICKER",
-  "verdict":         "STRONG BUY | BUY | MAINTAIN | REDUCE | SELL",
-  "verdict_emoji":   "🟢" si STRONG BUY/BUY · "🟡" si MAINTAIN · "🔴" si REDUCE/SELL,
-  "confidence":      "HIGH | MEDIUM | LOW",
-  "one_liner":       "Máx 12 palabras. Accionable y directo.",
-  "price_context":   "Explicación del movimiento de precio de hoy en 1 frase.",
-  "main_catalyst":   "El catalizador más importante próximo. Confirmado o con fuente.",
-  "main_risk":       "El riesgo más relevante ahora mismo.",
-  "news_today":      "Noticia más relevante de hoy/ayer encontrada vía web_search. Si no hay, '—'.",
-  "earnings_alert":  "Próxima fecha de earnings si es <30 días. Si no, '—'.",
-  "analyst_summary": "Resumen del consenso de analistas actual (si tienes datos).",
-  "data_confirmed":  true si verificaste datos con web_search, false si solo usaste datos locales
-}}"""
-
-    try:
-        log.info(f"Llamando a Claude ({model}) con web_search activado...")
-        resp = client.messages.create(
-            model=model,
-            max_tokens=4000,
-            system=system,
-            tools=[
-                {
-                    "type": "web_search_20250305",
-                    "name": "web_search",
-                }
-            ],
-            messages=[{"role": "user", "content": user}],
-        )
-
-        # Extraer el texto final de la respuesta (puede haber tool_use blocks intercalados)
-        raw = ""
-        for block in resp.content:
-            if block.type == "text":
-                raw = block.text.strip()
-
-        # Eliminar posibles markdown fences
-        if "```" in raw:
-            parts = raw.split("```")
-            # Tomar el contenido entre backticks
-            for part in parts[1::2]:
-                if part.lower().startswith("json"):
-                    part = part[4:]
-                raw = part.strip()
-                break
-
-        result = json.loads(raw)
-        log.info(f"Análisis generado para {len(result)} tickers")
-        return result
-
-    except json.JSONDecodeError as e:
-        log.error(f"Claude devolvió JSON inválido: {e}\nRaw (primeros 400 chars): {raw[:400]}")
-        return []
-    except anthropic.APIStatusError as e:
-        # web_search puede no estar disponible en todas las regiones/planes
-        if "web_search" in str(e).lower() or e.status_code == 400:
-            log.warning("web_search no disponible — reintentando SIN web search")
-            return generate_analysis_no_search(stocks, market, cfg)
-        log.error(f"Error API Anthropic: {e}")
-        return []
-    except Exception as e:
-        log.error(f"Error generando análisis: {e}")
-        return []
-
-
-def generate_analysis_no_search(stocks: list[dict], market: dict, cfg: dict) -> list[dict]:
-    """Fallback: análisis sin web_search si no está disponible."""
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    model  = cfg.get("model", "claude-sonnet-4-6")
-    valid  = [s for s in stocks if "error" not in s]
-    today  = date.today().strftime("%A, %d de %B de %Y")
+    macro_signals = []
+    vix = market.get("VIX",{}).get("value")
+    if vix:
+        if vix < 15: macro_signals.append(f"VIX {vix} — mercado en complacencia")
+        elif vix < 25: macro_signals.append(f"VIX {vix} — volatilidad moderada")
+        else: macro_signals.append(f"VIX {vix} — ALTA volatilidad, mercado en miedo")
+    yield10 = market.get("10Y Yield",{}).get("value")
+    if yield10:
+        if yield10 > 4.5: macro_signals.append(f"Bono 10Y al {yield10}% — tipos altos, presión en múltiplos")
+        elif yield10 > 3.5: macro_signals.append(f"Bono 10Y al {yield10}% — tipos moderados")
+        else: macro_signals.append(f"Bono 10Y al {yield10}% — tipos bajos, favorable renta variable")
+    sp_chg = market.get("S&P 500",{}).get("change_pct",0)
+    macro_signals.append(f"S&P 500 hoy {'+' if sp_chg>=0 else ''}{sp_chg:.2f}%")
+    macro_context = " · ".join(macro_signals)
 
     user = f"""Fecha: {today}
+Contexto macro: {macro_context}
 
-DATOS DE CARTERA:
-{json.dumps(valid, indent=2)}
+DATOS COMPLETOS DE MERCADO:
+{json.dumps(market, indent=2, ensure_ascii=False)}
 
-CONTEXTO MACRO:
-{json.dumps(market, indent=2)}
+POSICIONES A ANALIZAR:
+{json.dumps(valid, indent=2, ensure_ascii=False)}
+{news_block}
 
-Analiza cada ticker. Devuelve SOLO JSON array con este schema:
-{{"ticker":"","verdict":"STRONG BUY|BUY|MAINTAIN|REDUCE|SELL","verdict_emoji":"🟢/🟡/🔴",
-"confidence":"HIGH|MEDIUM|LOW","one_liner":"máx 12 palabras","price_context":"1 frase sobre el movimiento",
-"main_catalyst":"catalizador principal","main_risk":"riesgo principal","news_today":"—",
-"earnings_alert":"—","analyst_summary":"basado en datos locales","data_confirmed":false}}"""
+─────────────────────────────────────────────────────────
+INSTRUCCIONES DE ANÁLISIS
+
+Para cada ticker, produce un informe de inversión profesional.
+Cubre OBLIGATORIAMENTE:
+
+1. SITUACIÓN ACTUAL: ¿Qué explica el movimiento de precio de hoy?
+2. VALORACIÓN: ¿Está caro, justo o barato? Compara métricas con sector. Calcula upside al target de analistas.
+3. FUNDAMENTALES: Calidad del negocio — crecimiento, márgenes, ROE, FCF. ¿Mejorando o deteriorando?
+4. MACRO Y SECTOR: ¿Cómo afecta el entorno actual a esta posición?
+5. CATALIZADORES: Eventos próximos que puedan mover el precio.
+6. RIESGOS CONCRETOS: Los 2-3 riesgos más específicos con probabilidad e impacto.
+7. RECOMENDACIÓN: Explícita. ¿Comprar más, mantener, reducir, vender?
+   - Si COMPRAR: precio máximo de entrada + precio objetivo
+   - Si MANTENER: qué evento cambiaría la visión
+   - Si VENDER/REDUCIR: por qué ahora y stop loss referencia
+
+Devuelve ÚNICAMENTE un array JSON válido. Sin markdown, sin texto previo.
+Schema:
+[
+  {{
+    "ticker": "TICKER",
+    "verdict": "COMPRAR | MANTENER | REDUCIR | VENDER",
+    "verdict_emoji": "🟢 COMPRAR · 🟡 MANTENER · 🔴 REDUCIR o VENDER",
+    "conviction": "ALTA | MEDIA | BAJA",
+    "horizon": "Corto plazo (<3m) | Medio plazo (3-12m) | Largo plazo (>1 año)",
+    "situacion_hoy": "2-3 frases sobre estado actual y movimiento de hoy.",
+    "valoracion": {{
+      "vista_general": "¿Caro, justo o barato? Argumento concreto.",
+      "upside_analistasPct": null_o_numero,
+      "pe_vs_sector": "Comparativa P/E vs sector.",
+      "conclusion": "¿Merece la valoración el nivel de crecimiento esperado?"
+    }},
+    "fundamentales": {{
+      "fortalezas": ["punto 1", "punto 2"],
+      "debilidades": ["punto 1", "punto 2"],
+      "tendencia": "MEJORANDO | ESTABLE | DETERIORANDO"
+    }},
+    "macro_impacto": "Cómo afecta el entorno macro a esta posición.",
+    "catalizadores": [
+      {{"evento": "descripción", "plazo": "fecha o período", "impacto_esperado": "alcista/bajista/neutro"}}
+    ],
+    "riesgos": [
+      {{"riesgo": "descripción concreta", "probabilidad": "alta/media/baja", "impacto": "alto/medio/bajo"}}
+    ],
+    "recomendacion": {{
+      "accion": "Recomendación explícita en 1 frase.",
+      "precio_entrada_max": null_o_numero,
+      "precio_objetivo": null_o_numero,
+      "stop_loss_referencia": null_o_numero,
+      "razonamiento": "2-3 frases argumentando con datos concretos."
+    }},
+    "noticias_clave": "Titular más relevante de los proporcionados, o —.",
+    "alerta_earnings": "Fecha earnings si es en <30 días, o —."
+  }}
+]"""
 
     try:
-        resp = client.messages.create(
-            model=model,
-            max_tokens=3000,
-            messages=[{"role": "user", "content": user}],
-        )
+        log.info(f"Análisis profundo con Claude ({model})...")
+        resp = client.messages.create(model=model, max_tokens=8000, system=SYSTEM_PROMPT,
+                                      messages=[{"role":"user","content":user}])
         raw = resp.content[0].text.strip()
         if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.lower().startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw.strip())
+            for part in raw.split("```")[1::2]:
+                raw = part[4:].strip() if part.lower().startswith("json") else part.strip()
+                break
+        result = json.loads(raw)
+        log.info(f"Análisis para {len(result)} tickers ✓")
+        return result
+    except json.JSONDecodeError as e:
+        log.error(f"JSON inválido: {e}\nRaw: {raw[:500]}")
+        return []
+    except anthropic.APIStatusError as e:
+        log.error(f"API Anthropic ({e.status_code}): {e.message}")
+        return []
     except Exception as e:
-        log.error(f"Fallback análisis también falló: {e}")
+        log.error(f"Error análisis: {e}")
         return []
 
+def _esc(t): return str(t).replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+def _pct(v,d=2): return "—" if v is None else f"{'+' if v>=0 else ''}{v:.{d}f}%"
+def _price(v): return "—" if v is None else f"${v:,.2f}"
+def _ratio(v,s="x"): return "—" if v is None else f"{v:.1f}{s}"
 
-# ─── Telegram Formatting ─────────────────────────────────────────────────────
-
-def _esc(text) -> str:
-    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-def _pct(val) -> str:
-    if val is None:
-        return "—"
-    sign = "+" if val >= 0 else ""
-    return f"{sign}{val:.1f}%"
-
-def _price(val) -> str:
-    if val is None:
-        return "—"
-    return f"${val:,.2f}"
-
-
-def format_message(stocks: list[dict], analyses: list[dict], market: dict, tz_name: str) -> str:
-    tz  = ZoneInfo(tz_name)
+def format_message(stocks, analyses, market, tz_name):
+    tz = ZoneInfo(tz_name)
     now = datetime.now(tz).strftime("%a %d %b %Y · %H:%M %Z")
-    a_map = {a["ticker"]: a for a in analyses}
-
+    a_map = {a["ticker"]:a for a in analyses}
     lines = []
 
-    # ── Header ──────────────────────────────────────────────────────
-    lines += [
-        "━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "📊 <b>DAILY PORTFOLIO REPORT</b>",
-        f"🗓  {_esc(now)}",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "",
-    ]
+    lines += ["━━━━━━━━━━━━━━━━━━━━━━━━━","📊 <b>INFORME DE CARTERA</b>",f"🗓  {_esc(now)}","━━━━━━━━━━━━━━━━━━━━━━━━━",""]
+    lines.append("<b>🌍 Mercado Global</b>")
+    for name, d in market.items():
+        chg = d["change_pct"]
+        em = "🟢" if chg>0.3 else ("🔴" if chg<-0.3 else "⚪")
+        lines.append(f"  {em} {_esc(name)}: <code>{d['value']:,.2f}</code>  {_pct(chg)}")
+    lines += ["",""]
 
-    # ── Mercado ─────────────────────────────────────────────────────
-    if market:
-        lines.append("<b>🌍 Contexto Macro</b>")
-        for name, d in market.items():
-            chg  = d["change_pct"]
-            em   = "🟢" if chg > 0.3 else ("🔴" if chg < -0.3 else "⚪")
-            sign = "+" if chg >= 0 else ""
-            val  = f"{d['value']:,.2f}"
-            lines.append(f"  {em} {_esc(name)}: <code>{val}</code>  {sign}{chg:.2f}%")
-        lines += ["", ""]
-
-    # ── Por ticker ──────────────────────────────────────────────────
     for s in stocks:
         if "error" in s:
-            lines += [f"⚠️ <b>{_esc(s['ticker'])}</b> — {_esc(s['error'])}", ""]
+            lines += [f"⚠️ <b>{_esc(s['ticker'])}</b> — datos no disponibles",""]
+            continue
+        tk = s["ticker"]
+        a = a_map.get(tk, {})
+        chg = s["change_pct"]
+        em = "🟢" if chg>0.5 else ("🔴" if chg<-0.5 else "⚪")
+
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append(f"{em} <b>{_esc(tk)}</b>  <code>{_price(s['price'])}</code>  <b>{_pct(chg)}</b>  <i>{_esc(s.get('short_name',''))}</i>")
+        lines.append(f"  <i>{_esc(s.get('sector',''))} · {_esc(s.get('country',''))}</i>")
+
+        if s.get("vol_ratio") and s["vol_ratio"]>1.8:
+            lines.append(f"  📢 Volumen {s['vol_ratio']:.1f}x la media — actividad inusual")
+
+        lines += ["","  <b>📐 Valoración</b>"]
+        row1 = []
+        if s.get("pe_ttm"): row1.append(f"P/E {_ratio(s['pe_ttm'])}")
+        if s.get("pe_fwd"): row1.append(f"Fwd {_ratio(s['pe_fwd'])}")
+        if s.get("peg"): row1.append(f"PEG {s['peg']:.2f}")
+        if s.get("ev_ebitda"): row1.append(f"EV/EBITDA {_ratio(s['ev_ebitda'])}")
+        if row1: lines.append("  "+"  ·  ".join(row1))
+        if s.get("pct_from_high") is not None:
+            lines.append(f"  52w: {_price(s.get('low_52w'))} – {_price(s.get('high_52w'))}  ({abs(s['pct_from_high']):.1f}% del máx)")
+        if s.get("target_mean") and s.get("analyst_count"):
+            upside = ((s["target_mean"]-s["price"])/s["price"])*100
+            lines.append(f"  🎯 Consenso: {_price(s['target_mean'])}  ({_pct(upside,1)})  ·  {s['analyst_count']} analistas  ·  <i>{_esc(s.get('recommendation',''))}</i>")
+
+        lines += ["","  <b>📈 Fundamentales</b>"]
+        row2 = []
+        if s.get("revenue_growth") is not None: row2.append(f"Rev {_pct(s['revenue_growth']*100,1)}")
+        if s.get("profit_margins") is not None: row2.append(f"Margen neto {_pct(s['profit_margins']*100,1)}")
+        if s.get("roe") is not None: row2.append(f"ROE {_pct(s['roe']*100,1)}")
+        if s.get("fcf_b"): row2.append(f"FCF ${s['fcf_b']:.1f}B")
+        if row2: lines.append("  "+"  ·  ".join(row2))
+
+        if s.get("sma20") and s.get("sma50"):
+            if s.get("above_sma20") and s.get("above_sma50"):
+                lines.append("  🟢 Por encima de SMA20 y SMA50 — tendencia alcista")
+            elif not s.get("above_sma20") and not s.get("above_sma50"):
+                lines.append("  🔴 Por debajo de SMA20 y SMA50 — tendencia bajista")
+            elif s.get("above_sma50"):
+                lines.append("  🟡 Por encima SMA50, por debajo SMA20 — consolidación")
+            else:
+                lines.append("  🟡 Por encima SMA20, por debajo SMA50 — rebote")
+
+        if s.get("next_earnings") and s["next_earnings"] not in ("","None","nan","NaT"):
+            lines.append(f"  📅 Próximos earnings: <b>{_esc(s['next_earnings'])}</b>")
+
+        if not a:
+            lines += ["","  <i>Análisis no disponible</i>",""]
             continue
 
-        tk  = s["ticker"]
-        a   = a_map.get(tk, {})
-        chg = s["change_pct"]
+        lines.append("")
+        conv_em = {"ALTA":"🔵","MEDIA":"🟡","BAJA":"⚠️"}.get(a.get("conviction",""),"")
+        lines.append(f"  {a.get('verdict_emoji','')} <b>{_esc(a.get('verdict',''))}</b>  {conv_em} Convicción {_esc(a.get('conviction',''))}  ·  {_esc(a.get('horizon',''))}")
+        if a.get("situacion_hoy"):
+            lines.append(f"  💬 {_esc(a['situacion_hoy'])}")
 
-        # — Línea de precio —
-        price_em = "🟢" if chg > 0.5 else ("🔴" if chg < -0.5 else "⚪")
-        lines.append(
-            f"{price_em} <b>{_esc(tk)}</b>  <code>{_price(s['price'])}</code>  "
-            f"<b>{_pct(chg)}</b>  <i>{_esc(s.get('short_name',''))}</i>"
-        )
+        val_b = a.get("valoracion",{})
+        if val_b:
+            lines += ["","  <b>💡 Valoración</b>"]
+            if val_b.get("vista_general"): lines.append(f"  {_esc(val_b['vista_general'])}")
+            if val_b.get("pe_vs_sector"): lines.append(f"  {_esc(val_b['pe_vs_sector'])}")
+            if val_b.get("conclusion"): lines.append(f"  <i>{_esc(val_b['conclusion'])}</i>")
 
-        # — Alerta de volumen inusual —
-        vr = s.get("vol_ratio")
-        if vr and vr > 1.5:
-            lines.append(f"  📢 Volumen {vr:.1f}× la media — actividad inusual")
+        fund = a.get("fundamentales",{})
+        if fund:
+            lines += ["","  <b>📊 Fundamentales</b>"]
+            tend_em = {"MEJORANDO":"🟢","ESTABLE":"🟡","DETERIORANDO":"🔴"}.get(fund.get("tendencia",""),"")
+            lines.append(f"  Tendencia: {tend_em} {_esc(fund.get('tendencia',''))}")
+            for f_str in fund.get("fortalezas",[]): lines.append(f"  ✅ {_esc(f_str)}")
+            for d_str in fund.get("debilidades",[]): lines.append(f"  ⚡ {_esc(d_str)}")
 
-        # — Métricas de valoración —
-        m_parts = []
-        if s.get("pe_ttm"):   m_parts.append(f"P/E {s['pe_ttm']:.1f}x")
-        if s.get("pe_fwd"):   m_parts.append(f"Fwd {s['pe_fwd']:.1f}x")
-        if s.get("peg"):      m_parts.append(f"PEG {s['peg']:.2f}")
-        if m_parts:
-            lines.append("  📐 " + "  ·  ".join(m_parts))
+        if a.get("macro_impacto"):
+            lines += ["",f"  <b>🌐 Macro:</b> {_esc(a['macro_impacto'])}"]
 
-        # — 52 semanas —
-        if s.get("pct_from_high") is not None:
-            gap_h = abs(s["pct_from_high"])
-            lines.append(
-                f"  📈 52w: {_price(s.get('low_52w'))}–{_price(s.get('high_52w'))}  "
-                f"({gap_h:.1f}% del máximo)"
-            )
+        cats = a.get("catalizadores",[])
+        if cats:
+            lines += ["","  <b>⚡ Catalizadores</b>"]
+            for c in cats[:3]:
+                imp_em = {"alcista":"🟢","bajista":"🔴","neutro":"⚪"}.get(c.get("impacto_esperado","").lower(),"")
+                lines.append(f"  {imp_em} {_esc(c.get('evento',''))}  <i>{_esc(c.get('plazo',''))}</i>")
 
-        # — Target analistas —
-        if s.get("target_mean") and s.get("analyst_count"):
-            upside = ((s["target_mean"] - s["price"]) / s["price"]) * 100
-            lines.append(
-                f"  🎯 Target: {_price(s['target_mean'])} ({_pct(upside)})  "
-                f"— {s['analyst_count']} analistas · <i>{_esc(s.get('recommendation',''))}</i>"
-            )
+        risks = a.get("riesgos",[])
+        if risks:
+            lines += ["","  <b>⚠️ Riesgos</b>"]
+            for r in risks[:3]:
+                prob_em = {"alta":"🔴","media":"🟡","baja":"🟢"}.get(r.get("probabilidad","").lower(),"⚪")
+                lines.append(f"  {prob_em} {_esc(r.get('riesgo',''))}  [prob: {_esc(r.get('probabilidad','?'))} · impacto: {_esc(r.get('impacto','?'))}]")
 
-        # — Próximos earnings —
-        if s.get("next_earnings_date") and s["next_earnings_date"] not in ("", "None", "nan"):
-            lines.append(f"  📅 Earnings: <b>{_esc(s['next_earnings_date'])}</b>")
+        if a.get("noticias_clave") and a["noticias_clave"]!="—":
+            lines += ["",f"  🗞  {_esc(a['noticias_clave'])}"]
+        if a.get("alerta_earnings") and a["alerta_earnings"]!="—":
+            lines.append(f"  ⏰ <b>EARNINGS:</b> {_esc(a['alerta_earnings'])}")
 
-        # — Bloque de análisis Claude —
-        if a:
-            conf_em = {"HIGH": "🔵", "MEDIUM": "🟡", "LOW": "⚠️"}.get(a.get("confidence",""), "")
-            verified = "✅" if a.get("data_confirmed") else "📋"
-            lines.append(
-                f"  {_esc(a.get('verdict_emoji',''))} <b>{_esc(a.get('verdict',''))}</b> "
-                f"{conf_em} — {_esc(a.get('one_liner',''))}"
-            )
-            if a.get("price_context"):
-                lines.append(f"  💬 {_esc(a['price_context'])}")
-            if a.get("news_today") and a["news_today"] != "—":
-                lines.append(f"  🗞  {verified} {_esc(a['news_today'])}")
-            if a.get("earnings_alert") and a["earnings_alert"] != "—":
-                lines.append(f"  ⏰ <b>EARNINGS PRÓXIMOS:</b> {_esc(a['earnings_alert'])}")
-            if a.get("main_catalyst"):
-                lines.append(f"  ⚡ <b>Catalizador:</b> {_esc(a['main_catalyst'])}")
-            if a.get("main_risk"):
-                lines.append(f"  ⚠️ <b>Riesgo:</b> {_esc(a['main_risk'])}")
-            if a.get("analyst_summary"):
-                lines.append(f"  📊 {_esc(a['analyst_summary'])}")
+        rec = a.get("recomendacion",{})
+        if rec:
+            lines += ["","  ┌─ <b>RECOMENDACIÓN DE INVERSIÓN</b>",f"  │  {_esc(rec.get('accion',''))}"]
+            if rec.get("precio_entrada_max"): lines.append(f"  │  💰 Entrada máx: <code>{_price(rec['precio_entrada_max'])}</code>")
+            if rec.get("precio_objetivo"): lines.append(f"  │  🎯 Precio objetivo: <code>{_price(rec['precio_objetivo'])}</code>")
+            if rec.get("stop_loss_referencia"): lines.append(f"  │  🛑 Stop ref: <code>{_price(rec['stop_loss_referencia'])}</code>")
+            if rec.get("razonamiento"): lines.append(f"  └─ <i>{_esc(rec['razonamiento'])}</i>")
 
         lines.append("")
 
-    # ── Footer ──────────────────────────────────────────────────────
-    lines += [
-        "━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<i>Claude + yfinance + web search · No es asesoramiento financiero</i>",
-    ]
-
+    lines += ["━━━━━━━━━━━━━━━━━━━━━━━━━","<i>Análisis por Claude · No es asesoramiento financiero</i>"]
     return "\n".join(lines)
 
-
-# ─── Telegram ────────────────────────────────────────────────────────────────
-
-def send_telegram(text: str, token: str, chat_id: str) -> bool:
-    url    = f"https://api.telegram.org/bot{token}/sendMessage"
-    chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
-
-    for i, chunk in enumerate(chunks):
-        payload = {
-            "chat_id":                  chat_id,
-            "text":                     chunk,
-            "parse_mode":               "HTML",
-            "disable_web_page_preview": True,
-        }
-        try:
-            r = httpx.post(url, json=payload, timeout=20)
-            r.raise_for_status()
-            log.info(f"Telegram: chunk {i+1}/{len(chunks)} enviado ✓")
-        except httpx.HTTPStatusError as e:
-            log.error(f"Error HTTP Telegram {e.response.status_code}: {e.response.text}")
-            return False
-        except Exception as e:
-            log.error(f"Error enviando a Telegram: {e}")
-            return False
-
-        if i < len(chunks) - 1:
-            time.sleep(1)  # Evitar rate limit de Telegram
-
-    return True
-
-
-def notify_error(message: str, token: str, chat_id: str):
-    """Envía notificación de error al Telegram."""
-    error_msg = f"⚠️ <b>Portfolio Tracker — Error</b>\n\n{message}\n\n<i>Revisa los logs en la RPi.</i>"
-    send_telegram(error_msg, token, chat_id)
-
-
-# ─── Entry Point ─────────────────────────────────────────────────────────────
-
-def run(config_path: str = "config.yaml") -> bool:
-    cfg     = load_config(config_path)
-    tickers = cfg["tickers"]
-    tz_name = cfg.get("timezone", "Europe/Madrid")
-    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-
-    # Validación de entorno
-    missing = [k for k, v in {
-        "ANTHROPIC_API_KEY":  os.environ.get("ANTHROPIC_API_KEY"),
-        "TELEGRAM_BOT_TOKEN": token,
-        "TELEGRAM_CHAT_ID":   chat_id,
-    }.items() if not v]
-
-    if missing:
-        msg = f"Variables de entorno faltantes: {', '.join(missing)}"
-        log.error(msg)
-        if token and chat_id:
-            notify_error(msg, token, chat_id)
-        return False
-
-    try:
-        log.info("=" * 50)
-        log.info(f"Iniciando reporte · {date.today()} · {len(tickers)} tickers")
-        log.info("=" * 50)
-
-        # 1. Datos de mercado
-        log.info("Paso 1/4: Obteniendo datos de mercado...")
-        market = fetch_market_context()
-        log.info(f"  → {len(market)} índices obtenidos")
-
-        # 2. Datos de tickers
-        log.info("Paso 2/4: Obteniendo datos de tickers...")
-        stocks = []
-        for tk in tickers:
-            s = fetch_stock(tk)
-            stocks.append(s)
-            time.sleep(0.5)  # Pequeña pausa entre llamadas a yfinance
-        valid = [s for s in stocks if "error" not in s]
-        log.info(f"  → {len(valid)}/{len(tickers)} tickers con datos válidos")
-
-        # 3. Análisis Claude
-        log.info(f"Paso 3/4: Generando análisis con Claude ({cfg.get('model')})...")
-        analyses = generate_analysis(stocks, market, cfg)
-        log.info(f"  → Análisis generados: {len(analyses)}")
-
-        # 4. Enviar a Telegram
-        log.info("Paso 4/4: Formateando y enviando a Telegram...")
-        message = format_message(stocks, analyses, market, tz_name)
-        success = send_telegram(message, token, chat_id)
-
-        if success:
-            log.info("✅ Reporte enviado correctamente")
-        else:
-            log.error("❌ Fallo al enviar el reporte")
-
-        return success
-
-    except Exception as e:
-        error_msg = f"Error inesperado: {type(e).__name__}: {str(e)}"
-        log.exception(error_msg)
-        notify_error(error_msg, token, chat_id)
-        return False
-
-
-if __name__ == "__main__":
-    config_arg = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"
-    ok = run(config_arg)
-    sys.exit(0 if ok else 1)
+def send_telegram(text, token, chat_id):
+    url = f"https://api.telegra
