@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}" data-theme="light">
+<html lang="{{ language|default('es') }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,12 +17,14 @@
       --radius: 1.15rem; --shadow: 0 24px 60px rgba(42,42,32,.08); --shadow-soft: 0 8px 24px rgba(42,42,32,.06);
       color-scheme: light;
     }
-    [data-theme="dark"] {
-      --bg: #0f1313; --bg-accent: #16201d; --surface: rgba(24,30,29,.84); --surface-2: rgba(34,42,40,.72);
-      --border: rgba(255,255,255,.08); --text: #eef1ed; --muted: #9aa7a0;
-      --primary: #6eb7ac; --danger: #ea7b7b; --success: #73bf8b; --accent: #e2a15f;
-      --shadow: 0 24px 60px rgba(0,0,0,.28); --shadow-soft: 0 8px 24px rgba(0,0,0,.18);
-      color-scheme: dark;
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1313; --bg-accent: #16201d; --surface: rgba(24,30,29,.84); --surface-2: rgba(34,42,40,.72);
+        --border: rgba(255,255,255,.08); --text: #eef1ed; --muted: #9aa7a0;
+        --primary: #6eb7ac; --danger: #ea7b7b; --success: #73bf8b; --accent: #e2a15f;
+        --shadow: 0 24px 60px rgba(0,0,0,.28); --shadow-soft: 0 8px 24px rgba(0,0,0,.18);
+        color-scheme: dark;
+      }
     }
     * { box-sizing:border-box; margin:0; padding:0; }
     body {
@@ -156,7 +158,7 @@
       text-align:center;
     }
     input, select, button { font:inherit; color:inherit; }
-    input, select { width:100%; min-height:44px; padding:.7rem .9rem; border-radius:.8rem; border:1px solid var(--border); background:var(--surface-2); font-size:.92rem; transition:border-color .12s ease, box-shadow .12s ease, background .12s ease; }
+    input, select { width:100%; min-height:44px; padding:.7rem .9rem; line-height:1.35; border-radius:.8rem; border:1px solid var(--border); background:var(--surface-2); font-size:.92rem; transition:border-color .12s ease, box-shadow .12s ease, background .12s ease; }
     input:focus, select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent); background:color-mix(in oklab, var(--surface-2) 60%, var(--primary) 6%); }
     .month-filter { display:flex; gap:.45rem; align-items:center; margin-left:auto; }
     .month-filter label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); }
@@ -239,7 +241,6 @@
         width:auto;
       }
     }
-    .theme-toggle-btn { width:42px; height:42px; padding:0; border-radius:50%; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; }
     ::selection { background:color-mix(in oklab, var(--primary) 26%, transparent); }
     :focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:.25rem; }
     ::-webkit-scrollbar { width:10px; height:10px; }
@@ -854,12 +855,6 @@
 
   <script>
     (() => {
-      // ── theme ──────────────────────────────────────────────────────────────
-      const root = document.documentElement;
-      let theme = localStorage.getItem('pp_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      const applyTheme = () => { root.setAttribute('data-theme', theme); };
-      applyTheme();
-
       // ── live text search filter (no page reload, no flash) ─────────────
       const searchInput = document.getElementById('history-search');
       const defSym = '{{ default_currency_sym }}';

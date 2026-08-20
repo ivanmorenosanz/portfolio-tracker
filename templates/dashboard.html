@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}" data-theme="light">
+<html lang="{{ language|default('es') }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -34,23 +34,25 @@
       --space-lg: 1.35rem;
       color-scheme: light;
     }
-    [data-theme="dark"] {
-      --bg: #0f1313;
-      --bg-accent: #16201d;
-      --surface: rgba(24, 30, 29, .84);
-      --surface-2: rgba(34, 42, 40, .72);
-      --surface-strong: #1a2120;
-      --border: rgba(255,255,255,.08);
-      --text: #eef1ed;
-      --muted: #9aa7a0;
-      --primary: #6eb7ac;
-      --primary-hover: #8cc8bf;
-      --accent: #e2a15f;
-      --success: #73bf8b;
-      --danger: #ea7b7b;
-      --shadow: 0 24px 60px rgba(0, 0, 0, .28);
-      --shadow-soft: 0 8px 24px rgba(0, 0, 0, .18);
-      color-scheme: dark;
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1313;
+        --bg-accent: #16201d;
+        --surface: rgba(24, 30, 29, .84);
+        --surface-2: rgba(34, 42, 40, .72);
+        --surface-strong: #1a2120;
+        --border: rgba(255,255,255,.08);
+        --text: #eef1ed;
+        --muted: #9aa7a0;
+        --primary: #6eb7ac;
+        --primary-hover: #8cc8bf;
+        --accent: #e2a15f;
+        --success: #73bf8b;
+        --danger: #ea7b7b;
+        --shadow: 0 24px 60px rgba(0, 0, 0, .28);
+        --shadow-soft: 0 8px 24px rgba(0, 0, 0, .18);
+        color-scheme: dark;
+      }
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -196,7 +198,6 @@
     .btn-icon:focus-visible { padding-right:.9rem; }
     .btn-icon:hover .icon-label { max-width:160px; opacity:1; transition-delay:.2s; }
     .btn-icon:focus-visible .icon-label { max-width:160px; opacity:1; }
-    .theme-toggle-btn { width:42px; height:42px; padding:0; border-radius:50%; font-size:1.05rem; }
 
     .card {
       position:relative;
@@ -366,7 +367,8 @@
     input,select {
       width:100%;
       min-height:42px;
-      padding:.62rem .88rem;
+      padding:.62rem 1.1rem;
+      line-height:1.35;
       border-radius:9999px;
       border:1px solid var(--border);
       background:color-mix(in oklab, var(--surface-strong) 66%, var(--surface-2) 34%);
@@ -588,8 +590,8 @@
           <span class="positive">{{ default_currency_sym }}{{ '%.2f'|format(total_expected_annual / 12) }}</span>
         </div>
         <div class="kpi-row" style="margin-top:.35rem">
-          <span class="muted">Ver detalle</span>
-          <span class="muted" style="font-size:.78rem">Clic para abrir</span>
+          <span class="muted">Estimación</span>
+          <span class="muted" style="font-size:.78rem">5y CAGR · yfinance</span>
         </div>
       </div>
 
@@ -857,7 +859,11 @@
       <h2 id="expected-returns-modal-title">Rendimiento esperado anual</h2>
       <button class="btn btn-icon btn-ghost" id="close-expected-returns-modal" type="button" aria-label="Cerrar">✕</button>
     </div>
-    <p class="muted" style="font-size:.84rem;margin-bottom:.9rem">Basado en el tipo de interés anual configurado en cada posición.</p>
+    <p class="muted" style="font-size:.84rem;margin-bottom:.9rem">
+      Estimación basada en la rentabilidad anualizada (CAGR) a 5 años del ticker vía yfinance.
+      Si no hay historial suficiente, se usa el TER configurado como aproximación.
+      <strong>Los resultados pasados no garantizan resultados futuros.</strong>
+    </p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -869,7 +875,12 @@
             <td>{{ row.account }}</td>
             <td>{{ row.asset }}</td>
             <td>{{ row.currency_sym }}{{ '%.2f'|format(row.market_value) }}</td>
-            <td class="positive">{{ '%.2f'|format(row.effective_rate) }}%</td>
+            <td class="positive">
+              {{ '%.2f'|format(row.expected_rate_pct) }}%
+              {% if row.expected_rate_basis %}
+              <div class="muted" style="font-size:.72rem;font-weight:500;line-height:1.1">{{ row.expected_rate_basis }}</div>
+              {% endif %}
+            </td>
             <td class="positive">{{ row.currency_sym }}{{ '%.2f'|format(row.expected_annual) }}</td>
             <td class="muted">{{ row.currency_sym }}{{ '%.2f'|format(row.expected_annual / 12) }}</td>
           </tr>
@@ -1241,13 +1252,6 @@
 
 <script>
   (() => {
-    // ── theme ──────────────────────────────────────────────────────────────
-    const root   = document.documentElement;
-
-    let theme = localStorage.getItem('pp_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    const applyTheme = () => { root.setAttribute('data-theme', theme); };
-    applyTheme();
-
     // ── draggable dashboard graphics ─────────────────────────────────────
     const widgetContainers = [...document.querySelectorAll('[data-dashboard-widget-container]')];
     const widgets = [...document.querySelectorAll('[data-dashboard-widget]')];

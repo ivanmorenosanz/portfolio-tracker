@@ -14,10 +14,7 @@
   .profile-section h3 { font-size:.86rem; }
   .profile-field { display:grid; gap:.25rem; }
   .profile-field label { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-  .profile-field select,.profile-field input { width:100%; min-height:42px; padding:.58rem .78rem; border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong,#fffdf9) 66%,var(--surface-2) 34%); color:var(--text); font:inherit; }
-  .profile-theme-options { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
-  .profile-theme { min-height:42px; padding:.55rem .7rem; border:1px solid var(--border); border-radius:.75rem; background:var(--surface-2); color:var(--text); cursor:pointer; font-weight:600; }
-  .profile-theme.active { border-color:var(--primary); background:color-mix(in oklab,var(--primary) 14%,var(--surface)); color:var(--primary); }
+  .profile-field select,.profile-field input { width:100%; min-height:42px; padding:.58rem .9rem; line-height:1.35; /* overrides inherited line-height so text isn't clipped */ border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong,#fffdf9) 66%,var(--surface-2) 34%); color:var(--text); font:inherit; }
   .profile-actions { display:flex; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
   .profile-message { min-height:1.1em; color:var(--success); font-size:.78rem; }
   .profile-error { min-height:1.1em; color:var(--danger); font-size:.78rem; }
@@ -35,14 +32,6 @@
       </div>
       <button class="profile-close" id="profile-close" type="button" aria-label="{% if language|default('es') == 'en' %}Close{% else %}Cerrar{% endif %}">✕</button>
     </div>
-
-    <section class="profile-section">
-      <h3>{% if language|default('es') == 'en' %}Appearance{% else %}Apariencia{% endif %}</h3>
-      <div class="profile-theme-options">
-        <button class="profile-theme" type="button" data-profile-theme="light">☀ {% if language|default('es') == 'en' %}Light{% else %}Claro{% endif %}</button>
-        <button class="profile-theme" type="button" data-profile-theme="dark">◐ {% if language|default('es') == 'en' %}Dark{% else %}Oscuro{% endif %}</button>
-      </div>
-    </section>
 
     <section class="profile-section">
       <h3>{% if language|default('es') == 'en' %}Language{% else %}Idioma{% endif %}</h3>
@@ -94,21 +83,13 @@
         'Cuota hipotecaria':'Mortgage payment', 'Importe del préstamo':'Loan amount', 'Intereses totales':'Total interest', 'Efectivo inicial':'Initial cash',
         'Coste acumulado':'Accumulated cost', 'Capital frente a intereses':'Principal versus interest', 'Amortización anual':'Annual amortization',
         'Hipotecas guardadas':'Saved mortgages', 'Recomendaciones':'Recommendations', 'Guardar hipoteca':'Save mortgage', 'Editar encuesta':'Edit survey',
-        'Apariencia':'Appearance', 'Idioma':'Language', 'Cambiar contraseña':'Change password', 'Guardar cuenta':'Save account', 'Guardar meta':'Save goal',
+        'Idioma':'Language', 'Cambiar contraseña':'Change password', 'Guardar cuenta':'Save account', 'Guardar meta':'Save goal',
       };
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
       textNodes.forEach((node) => { const trimmed = node.nodeValue.trim(); if (translations[trimmed]) node.nodeValue = node.nodeValue.replace(trimmed, translations[trimmed]); });
     }
-
-    const applyTheme = (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('pp_theme', theme);
-      document.querySelectorAll('[data-profile-theme]').forEach((button) => button.classList.toggle('active', button.dataset.profileTheme === theme));
-    };
-    applyTheme(localStorage.getItem('pp_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-    document.querySelectorAll('[data-profile-theme]').forEach((button) => button.addEventListener('click', () => applyTheme(button.dataset.profileTheme)));
 
     document.getElementById('profile-language-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
