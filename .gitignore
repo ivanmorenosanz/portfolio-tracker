@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Secrets / config
+.env
+.secret_key
+.recovery_key
+
+# Data
+*.db
+*.db.backup-*
+static/record_attachments/
+
+# Freebuff
+.freebuff/

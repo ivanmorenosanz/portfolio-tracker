@@ -1,0 +1,129 @@
+<style>
+  .profile-trigger { cursor:pointer; }
+  .profile-trigger:hover { transform:translateY(-1px); }
+  .profile-overlay { position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(0,0,0,.38); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .18s ease; }
+  .profile-overlay.open { opacity:1; pointer-events:auto; }
+  .profile-modal { width:min(100%,500px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius,1.15rem); background:var(--surface-strong,#fffdf9); color:var(--text); box-shadow:0 18px 55px rgba(0,0,0,.2); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
+  .profile-overlay.open .profile-modal { transform:translateY(0) scale(1); }
+  .profile-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:1rem; }
+  .profile-modal-head h2 { font-size:1.15rem; letter-spacing:-.03em; }
+  .profile-modal-head p { color:var(--muted); font-size:.78rem; margin-top:.2rem; }
+  .profile-close { width:34px; height:34px; min-height:34px; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-2); cursor:pointer; font-size:1.1rem; }
+  .profile-section { display:grid; gap:.65rem; padding:0 0 1rem; margin-bottom:1rem; border-bottom:1px solid var(--border); }
+  .profile-section:last-of-type { border-bottom:0; margin-bottom:0; padding-bottom:0; }
+  .profile-section h3 { font-size:.86rem; }
+  .profile-field { display:grid; gap:.25rem; }
+  .profile-field label { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+  .profile-field select,.profile-field input { width:100%; min-height:42px; padding:.58rem .78rem; border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong,#fffdf9) 66%,var(--surface-2) 34%); color:var(--text); font:inherit; }
+  .profile-theme-options { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+  .profile-theme { min-height:42px; padding:.55rem .7rem; border:1px solid var(--border); border-radius:.75rem; background:var(--surface-2); color:var(--text); cursor:pointer; font-weight:600; }
+  .profile-theme.active { border-color:var(--primary); background:color-mix(in oklab,var(--primary) 14%,var(--surface)); color:var(--primary); }
+  .profile-actions { display:flex; justify-content:flex-end; gap:.5rem; flex-wrap:wrap; }
+  .profile-message { min-height:1.1em; color:var(--success); font-size:.78rem; }
+  .profile-error { min-height:1.1em; color:var(--danger); font-size:.78rem; }
+  .profile-modal .profile-btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:.58rem .85rem; border:1px solid var(--border); border-radius:999px; background:var(--surface-2); color:var(--text); cursor:pointer; font-weight:600; }
+  .profile-modal .profile-btn-primary { color:#fff; background:var(--primary); border-color:transparent; }
+  @media (max-width:520px) { .profile-modal { padding:1rem; } }
+</style>
+
+<div class="profile-overlay" id="profile-overlay" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+  <div class="profile-modal">
+    <div class="profile-modal-head">
+      <div>
+        <h2 id="profile-modal-title">{% if language|default('es') == 'en' %}Profile settings{% else %}Ajustes del perfil{% endif %}</h2>
+        <p>{{ username or '' }} · {% if language|default('es') == 'en' %}Personalize your experience{% else %}Personaliza tu experiencia{% endif %}</p>
+      </div>
+      <button class="profile-close" id="profile-close" type="button" aria-label="{% if language|default('es') == 'en' %}Close{% else %}Cerrar{% endif %}">✕</button>
+    </div>
+
+    <section class="profile-section">
+      <h3>{% if language|default('es') == 'en' %}Appearance{% else %}Apariencia{% endif %}</h3>
+      <div class="profile-theme-options">
+        <button class="profile-theme" type="button" data-profile-theme="light">☀ {% if language|default('es') == 'en' %}Light{% else %}Claro{% endif %}</button>
+        <button class="profile-theme" type="button" data-profile-theme="dark">◐ {% if language|default('es') == 'en' %}Dark{% else %}Oscuro{% endif %}</button>
+      </div>
+    </section>
+
+    <section class="profile-section">
+      <h3>{% if language|default('es') == 'en' %}Language{% else %}Idioma{% endif %}</h3>
+      <form id="profile-language-form">
+        <div class="profile-field"><label for="profile-language">{% if language|default('es') == 'en' %}Page language{% else %}Idioma de la página{% endif %}</label><select id="profile-language" name="language"><option value="es">Español</option><option value="en">English</option></select></div>
+        <div class="profile-actions" style="margin-top:.6rem"><button class="profile-btn profile-btn-primary" type="submit">{% if language|default('es') == 'en' %}Save language{% else %}Guardar idioma{% endif %}</button></div>
+      </form>
+    </section>
+
+    <section class="profile-section">
+      <h3>{% if language|default('es') == 'en' %}Change password{% else %}Cambiar contraseña{% endif %}</h3>
+      <form id="profile-password-form">
+        <div class="profile-field"><label for="profile-current-password">{% if language|default('es') == 'en' %}Current password{% else %}Contraseña actual{% endif %}</label><input id="profile-current-password" name="current_password" type="password" autocomplete="current-password" required></div>
+        <div class="profile-field"><label for="profile-new-password">{% if language|default('es') == 'en' %}New password{% else %}Nueva contraseña{% endif %}</label><input id="profile-new-password" name="new_password" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="profile-field"><label for="profile-new-password2">{% if language|default('es') == 'en' %}Repeat new password{% else %}Repite la nueva contraseña{% endif %}</label><input id="profile-new-password2" name="new_password2" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="profile-error" id="profile-password-error"></div><div class="profile-message" id="profile-password-message"></div>
+        <div class="profile-actions"><button class="profile-btn profile-btn-primary" type="submit">{% if language|default('es') == 'en' %}Update password{% else %}Actualizar contraseña{% endif %}</button></div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const overlay = document.getElementById('profile-overlay');
+    const close = document.getElementById('profile-close');
+    const language = '{{ language|default("es") }}';
+    const languageSelect = document.getElementById('profile-language');
+    const passwordForm = document.getElementById('profile-password-form');
+    const passwordError = document.getElementById('profile-password-error');
+    const passwordMessage = document.getElementById('profile-password-message');
+    const openProfile = () => overlay?.classList.add('open');
+    const closeProfile = () => overlay?.classList.remove('open');
+    const trigger = document.querySelector('.profile-trigger');
+    trigger?.addEventListener('click', openProfile);
+    close?.addEventListener('click', closeProfile);
+    if (languageSelect) languageSelect.value = language;
+
+    document.documentElement.lang = language;
+    if (language === 'en') {
+      const translations = {
+        'Movimientos':'Movements', 'Calendario':'Calendar', 'Hipoteca':'Mortgage', 'Bolsa':'Markets', 'Cotización':'Quote', 'Añadir cuenta':'Add account', 'Nueva posición':'New position', 'Salir':'Sign out',
+        'Control de patrimonio':'Wealth control', 'Valor de cartera':'Portfolio value', 'Invertido':'Invested', 'Gastos':'Expenses', 'Ingresos':'Income', 'Balance':'Balance',
+        'Dashboard':'Dashboard', 'Mes':'Month', 'Semana':'Week', 'Día':'Day', 'Año':'Year', 'Hoy':'Today', 'Atrás':'Back', 'Adelante':'Next',
+        'Movimientos de ingresos y gastos':'Income and expense movements', 'Registro de movimientos manuales y ejecuciones recurrentes':'Manual and recurring movement records',
+        'Simulador de hipoteca':'Mortgage simulator', 'Planificación de vivienda · España':'Home planning · Spain', 'Simulador de hipoteca':'Mortgage simulator',
+        'Datos de la compra':'Purchase details', 'Precio de la vivienda':'Property price', 'Aportación inicial total':'Total initial contribution', 'Gastos de compra':'Purchase costs',
+        'Plazo':'Term', 'Tipo de interés (TIN)':'Interest rate (TIN)', 'Comisión de apertura':'Opening fee', 'Coste extra mensual':'Extra monthly cost',
+        'Cuota hipotecaria':'Mortgage payment', 'Importe del préstamo':'Loan amount', 'Intereses totales':'Total interest', 'Efectivo inicial':'Initial cash',
+        'Coste acumulado':'Accumulated cost', 'Capital frente a intereses':'Principal versus interest', 'Amortización anual':'Annual amortization',
+        'Hipotecas guardadas':'Saved mortgages', 'Recomendaciones':'Recommendations', 'Guardar hipoteca':'Save mortgage', 'Editar encuesta':'Edit survey',
+        'Apariencia':'Appearance', 'Idioma':'Language', 'Cambiar contraseña':'Change password', 'Guardar cuenta':'Save account', 'Guardar meta':'Save goal',
+      };
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      textNodes.forEach((node) => { const trimmed = node.nodeValue.trim(); if (translations[trimmed]) node.nodeValue = node.nodeValue.replace(trimmed, translations[trimmed]); });
+    }
+
+    const applyTheme = (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('pp_theme', theme);
+      document.querySelectorAll('[data-profile-theme]').forEach((button) => button.classList.toggle('active', button.dataset.profileTheme === theme));
+    };
+    applyTheme(localStorage.getItem('pp_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    document.querySelectorAll('[data-profile-theme]').forEach((button) => button.addEventListener('click', () => applyTheme(button.dataset.profileTheme)));
+
+    document.getElementById('profile-language-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const response = await fetch('profile/preferences', { method:'POST', body:new FormData(event.currentTarget) });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) window.location.reload();
+      else alert(payload.error || (language === 'en' ? 'Could not save language.' : 'No se pudo guardar el idioma.'));
+    });
+
+    passwordForm?.addEventListener('submit', async (event) => {
+      event.preventDefault(); passwordError.textContent = ''; passwordMessage.textContent = '';
+      const response = await fetch('profile/password', { method:'POST', body:new FormData(event.currentTarget) });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) { passwordForm.reset(); passwordMessage.textContent = language === 'en' ? 'Password updated.' : 'Contraseña actualizada.'; }
+      else passwordError.textContent = payload.error || (language === 'en' ? 'Could not update password.' : 'No se pudo actualizar la contraseña.');
+    });
+  })();
+</script>

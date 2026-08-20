@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="{{ language|default('es') }}" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="{{ base_path(request) }}/">
+  <title>Calendario</title>
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+  <link rel="apple-touch-icon" href="static/favicon.svg">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4efe8; --bg-accent: #efe4d6; --surface: rgba(255,255,255,.84); --surface-2: rgba(255,255,255,.58);
+      --border: rgba(28,35,34,.10); --text: #171b1a; --muted: #66706b;
+      --primary: #0f6a63; --danger: #b54848; --success: #2f7d42; --accent: #c9792b;
+      --radius: 1.15rem; --shadow: 0 24px 60px rgba(42,42,32,.08); --shadow-soft: 0 8px 24px rgba(42,42,32,.06);
+      color-scheme: light;
+    }
+    [data-theme="dark"] {
+      --bg: #0f1313; --bg-accent: #16201d; --surface: rgba(24,30,29,.84); --surface-2: rgba(34,42,40,.72);
+      --border: rgba(255,255,255,.08); --text: #eef1ed; --muted: #9aa7a0;
+      --primary: #6eb7ac; --danger: #ea7b7b; --success: #73bf8b; --accent: #e2a15f;
+      --shadow: 0 24px 60px rgba(0,0,0,.28); --shadow-soft: 0 8px 24px rgba(0,0,0,.18);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Satoshi','Inter',system-ui,sans-serif; color: var(--text); line-height: 1.6;
+      background:
+        radial-gradient(circle at top left, color-mix(in oklab, var(--bg-accent) 90%, white) 0, transparent 30%),
+        radial-gradient(circle at 100% 0, color-mix(in oklab, var(--primary) 12%, transparent) 0, transparent 32%),
+        linear-gradient(180deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 86%, white) 100%);
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    .shell { max-width: 1320px; margin: 0 auto; padding: 1.25rem 1.25rem 2rem; }
+    .header {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem;
+      margin-bottom: 1rem; flex-wrap: wrap; border: 1px solid var(--border); border-radius: calc(var(--radius) + .2rem);
+      background: linear-gradient(145deg, color-mix(in oklab, var(--surface) 82%, var(--accent) 18%) 0%, color-mix(in oklab, var(--surface) 92%, var(--primary) 8%) 100%);
+      box-shadow: var(--shadow);
+    }
+    .header h1 { font-size: clamp(1.9rem, 3vw, 2.9rem); font-weight: 700; letter-spacing: -.06em; }
+    .header p { font-size: .92rem; color: var(--muted); margin-top: .25rem; }
+    .actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .4rem; padding: .72rem 1rem;
+      border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); text-decoration: none;
+      box-shadow: var(--shadow-soft); font-weight: 600; cursor: pointer;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); background: color-mix(in oklab, var(--surface-2) 72%, var(--primary) 28%); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
+    .btn:active { transform: translateY(1px); box-shadow: none; }
+    .btn:disabled { opacity: .45; pointer-events: none; }
+    .btn.primary { background: var(--primary); color: #fff; border-color: transparent; }
+    .btn-icon { height: 42px; padding: 0; border-radius: 999px; gap: 0; overflow: hidden; transition: padding .18s ease; }
+    .btn-icon .icon-glyph { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex: 0 0 42px; }
+    .btn-icon .icon-label { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: .85rem; font-weight: 600; transition: max-width .18s ease, opacity .18s ease; }
+    .btn-icon:hover { padding-right: .9rem; transition-delay: .2s; }
+    .btn-icon:focus-visible { padding-right: .9rem; }
+    .btn-icon:hover .icon-label { max-width: 160px; opacity: 1; transition-delay: .2s; }
+    .btn-icon:focus-visible .icon-label { max-width: 160px; opacity: 1; }
+    .theme-toggle-btn { width: 42px; height: 42px; padding: 0; border-radius: 50%; font-size: 1.05rem; }
+    .user-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: color-mix(in oklab, var(--primary) 22%, var(--surface));
+      border: 1px solid var(--border);
+      font-size: .92rem; font-weight: 700; color: var(--primary); cursor: default;
+    }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-soft); backdrop-filter: blur(14px); }
+
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .toolbar h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.03em; }
+    .toolbar .nav-group { display: flex; gap: .4rem; align-items: center; }
+
+    .switcher { display: inline-flex; gap: .2rem; padding: .2rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); }
+    .switcher a { padding: .42rem .85rem; border-radius: 999px; text-decoration: none; font-size: .85rem; font-weight: 600; color: var(--muted); transition: background .15s ease, color .15s ease; }
+    .switcher a.active { background: var(--primary); color: #fff; }
+
+    .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .82rem; color: var(--muted); margin-top: .35rem; }
+    .legend span { display: inline-flex; align-items: center; gap: .35rem; }
+    .dot { width: .6rem; height: .6rem; border-radius: 50%; display: inline-block; }
+    .dot.spent { background: var(--danger); }
+    .dot.earned { background: var(--success); }
+    .dot.transfer { background: var(--accent); }
+    .dot.scheduled { background: var(--primary); }
+
+    /* month grid */
+    .calendar { display: grid; grid-template-columns: 2.2rem repeat(7, 1fr); gap: .45rem; }
+    .cal-weekday { padding: .5rem .25rem; text-align: center; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+    .week-num {
+      display: flex; align-items: center; justify-content: center;
+      font-size: .68rem; font-weight: 700; color: var(--muted);
+      text-decoration: none; border-radius: .5rem;
+      transition: color .12s ease, background .12s ease;
+    }
+    .week-num:hover { color: var(--primary); background: color-mix(in oklab, var(--primary) 10%, var(--surface)); }
+    .day-cell {
+      min-height: 96px; border: 1px solid var(--border); border-radius: .8rem; background: var(--surface-2);
+      padding: .55rem .5rem; cursor: pointer; display: flex; flex-direction: column; gap: .3rem; overflow: hidden;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .day-cell:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
+    .day-cell.outside { opacity: .38; }
+    .day-cell.today { border-color: var(--primary); background: color-mix(in oklab, var(--surface) 78%, var(--primary) 22%); }
+    .day-cell.future { background: color-mix(in oklab, var(--surface-2) 92%, var(--primary) 8%); }
+    .day-top { display: flex; align-items: center; justify-content: space-between; }
+    .day-num { font-weight: 700; font-size: .9rem; }
+    .day-cell.today .day-num { color: var(--primary); }
+    .sched-badge { width: .55rem; height: .55rem; border-radius: 50%; background: var(--primary); }
+    .day-top-tools { display: flex; align-items: center; gap: .25rem; }
+    .day-add-btn {
+      background: none; border: 1px solid var(--border); border-radius: 50%;
+      width: 20px; height: 20px; padding: 0; line-height: 1;
+      font-size: .8rem; font-weight: 700; color: var(--primary);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .12s ease, background .12s ease;
+    }
+    .day-cell:hover .day-add-btn,
+    .day-add-btn:focus-visible { opacity: 1; }
+    .day-add-btn:hover { background: color-mix(in oklab, var(--primary) 16%, var(--surface)); }
+    .day-body { display: flex; flex-direction: column; gap: .12rem; font-size: .7rem; line-height: 1.25; }
+    .amt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+    .amt.spent { color: var(--danger); }
+    .amt.earned { color: var(--success); }
+    .amt.transfer { color: var(--accent); }
+    .amt.balance { color: var(--muted); font-weight: 500; }
+    .amt.balance.negative { color: var(--danger); }
+
+    /* week grid */
+    .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .45rem; align-items: stretch; }
+    .week-day { border: 1px solid var(--border); border-radius: .8rem; background: var(--surface-2); padding: .5rem; min-height: 120px; display: flex; flex-direction: column; gap: .35rem; }
+    .week-day.today { border-color: var(--primary); background: color-mix(in oklab, var(--surface) 82%, var(--primary) 18%); }
+    .week-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: .3rem; font-size: .72rem; }
+    .week-day-head .wd { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: .62rem; }
+    .week-day-head .dn { font-weight: 700; font-size: .9rem; }
+    .week-day.today .dn { color: var(--primary); }
+    .week-events { display: flex; flex-direction: column; gap: .3rem; min-height: 0; }
+
+    /* shared event row */
+    .event { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
+    .event:last-child { border-bottom: none; }
+    .event .ev-left { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+    .event .ev-name { font-weight: 600; font-size: .9rem; display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .event .ev-sub { font-size: .78rem; color: var(--muted); }
+    .event .ev-amount { font-weight: 700; white-space: nowrap; }
+    .ev-amount.expense { color: var(--danger); }
+    .ev-amount.income { color: var(--success); }
+    .ev-amount.transfer { color: var(--accent); }
+    .event-actions { display: flex; flex-direction: column; gap: .2rem; align-items: flex-end; }
+
+    .compact .event { padding: .3rem 0; }
+    .compact .ev-name { font-size: .78rem; }
+    .compact .ev-sub { font-size: .68rem; }
+    .compact .ev-amount { font-size: .78rem; }
+
+    .pill { display: inline-flex; padding: .18rem .5rem; border-radius: 9999px; background: color-mix(in oklab, var(--primary) 10%, var(--surface)); color: var(--primary); font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; white-space: nowrap; }
+    .pill.expense { background: color-mix(in oklab, var(--danger) 10%, var(--surface)); color: var(--danger); }
+    .pill.income { background: color-mix(in oklab, var(--success) 12%, var(--surface)); color: var(--success); }
+    .pill.transfer { background: color-mix(in oklab, var(--accent) 14%, var(--surface)); color: var(--accent); }
+    .pill.scheduled { background: color-mix(in oklab, var(--primary) 10%, var(--surface)); color: var(--primary); }
+    .attach { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--primary); text-decoration: none; font-weight: 600; }
+    .attach:hover { text-decoration: underline; }
+    .empty-note { color: var(--muted); font-size: .9rem; padding: .5rem 0; }
+    .event-group-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 1rem 0 .45rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+
+    /* day view */
+    .day-summary { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .4rem; align-items: center; }
+    .day-summary .sum { font-weight: 700; font-size: 1.05rem; }
+    .sum.spent { color: var(--danger); }
+    .sum.earned { color: var(--success); }
+    .sum.balance { color: var(--primary); }
+    .sum.balance.negative { color: var(--danger); }
+    .week-balance { font-size: .66rem; font-weight: 700; color: var(--muted); }
+    .week-balance.negative { color: var(--danger); }
+
+    /* year overview */
+    .year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .8rem; }
+    .year-month { padding: .85rem; }
+    .year-month-title {
+      display: block; font-weight: 700; font-size: .95rem; letter-spacing: -.02em;
+      text-decoration: none; margin-bottom: .55rem; color: var(--text);
+    }
+    .year-month-title:hover { color: var(--primary); }
+    .mini-month { display: grid; gap: .14rem; }
+    .mini-weekdays, .mini-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: .12rem; }
+    .mini-weekdays span { text-align: center; font-size: .56rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    .mini-day {
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-radius: .32rem; text-decoration: none; color: var(--text); background: var(--surface-2);
+      font-size: .62rem; line-height: 1; transition: background .12s ease;
+    }
+    .mini-day.blank { background: transparent; }
+    .mini-day:hover { background: color-mix(in oklab, var(--primary) 14%, var(--surface)); }
+    .mini-day.today { outline: 1.5px solid var(--primary); outline-offset: -1px; }
+    .mini-day-num { font-weight: 600; }
+    .mini-dots { display: flex; gap: 1.5px; height: 4px; margin-top: 2px; }
+    .mini-dots .dot { width: 4px; height: 4px; }
+
+    /* buttons inside rows */
+    .mini-btn {
+      background: none; border: 1px solid var(--border); border-radius: .5rem; cursor: pointer;
+      padding: .16rem .4rem; font-size: .76rem; line-height: 1; color: var(--muted);
+      transition: background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .mini-btn:hover { background: color-mix(in oklab, var(--primary) 14%, var(--surface)); color: var(--primary); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
+    .mini-btn.danger:hover { background: color-mix(in oklab, var(--danger) 14%, var(--surface)); color: var(--danger); border-color: color-mix(in oklab, var(--border) 60%, var(--danger) 40%); }
+    .add-day { font-weight: 700; color: var(--primary); }
+
+    /* form */
+    .form-grid { display: grid; gap: .85rem; }
+    .field { display: grid; gap: .3rem; }
+    .field label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+    .field .help { font-size: .78rem; color: var(--muted); }
+    input, select, button { font: inherit; color: inherit; }
+    input, select { width: 100%; min-height: 44px; padding: .7rem .9rem; border-radius: .8rem; border: 1px solid var(--border); background: var(--surface-2); font-size: .92rem; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent); background: color-mix(in oklab, var(--surface-2) 60%, var(--primary) 6%); }
+    input[type="file"] { padding: .5rem; }
+    select:disabled { opacity: .6; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+    .overlay.open { opacity: 1; pointer-events: auto; }
+    .modal { background: color-mix(in oklab, var(--surface) 92%, white 8%); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; transform: translateY(12px) scale(.98); transition: transform .18s ease; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+    .overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .modal-header h3 { font-size: 1.35rem; letter-spacing: -.03em; }
+    .modal-header .head-actions { display: flex; gap: .4rem; align-items: center; }
+    .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); line-height: 1; }
+
+    @media (max-width: 760px) {
+      .day-cell { min-height: 60px; padding: .35rem .3rem; }
+      .day-body, .amt { font-size: .6rem; }
+      .day-num { font-size: .8rem; }
+      .calendar, .week-grid { gap: .28rem; }
+      .calendar { grid-template-columns: 1.4rem repeat(7, 1fr); }
+      .week-num { font-size: .58rem; }
+      .week-grid { grid-template-columns: repeat(7, minmax(84px, 1fr)); overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <div>
+        <h1>Calendario</h1>
+        <p>Detalle diario de gastos, ingresos y transferencias, con eventos programados y documentos adjuntos.</p>
+      </div>
+      <div class="actions">
+        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
+        <button class="btn btn-icon" type="button" data-apps-trigger aria-label="Aplicaciones" title="Aplicaciones">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span><span class="icon-label">Apps</span>
+        </button>
+        <a class="btn btn-icon" href="." aria-label="Volver al dashboard">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">Dashboard</span>
+        </a>
+        <a class="btn btn-icon" href="loans" aria-label="Simulador de hipoteca">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">Hipoteca</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="toolbar">
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <a class="btn" href="calendar?view={{ view }}&date={{ prev_date }}">‹</a>
+          <a class="btn" href="calendar?view={{ view }}&date={{ today }}">Hoy</a>
+          <a class="btn" href="calendar?view={{ view }}&date={{ next_date }}">›</a>
+          <div class="switcher" role="tablist">
+            <a href="calendar?view=month&date={{ anchor }}" class="{{ 'active' if view == 'month' else '' }}">Mes</a>
+            <a href="calendar?view=week&date={{ anchor }}" class="{{ 'active' if view == 'week' else '' }}">Semana</a>
+            <a href="calendar?view=day&date={{ anchor }}" class="{{ 'active' if view == 'day' else '' }}">Día</a>
+            <a href="calendar?view=year&date={{ anchor }}" class="{{ 'active' if view == 'year' else '' }}">Año</a>
+          </div>
+        </div>
+        <h2>{{ title }}</h2>
+        <div class="legend">
+          <span><i class="dot spent"></i>Gastos</span>
+          <span><i class="dot earned"></i>Ingresos</span>
+          <span><i class="dot transfer"></i>Transferencias</span>
+          <span><i class="dot scheduled"></i>Programado</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      {% if view == 'month' %}
+        <div class="calendar">
+          <div class="cal-weekday"></div>
+          {% for w in weekdays %}<div class="cal-weekday">{{ w }}</div>{% endfor %}
+          {% for week in weeks %}
+            <a class="week-num" href="calendar?view=week&date={{ week.days[0]['date'] }}" title="Semana {{ week.week_number }}">{{ week.week_number }}</a>
+            {% for d in week.days %}
+              <div class="day-cell {{ 'outside' if not d.in_month else '' }} {{ 'today' if d.is_today else '' }} {{ 'future' if d.is_future else '' }}" data-date="{{ d.date }}">
+                <div class="day-top">
+                  <span class="day-num">{{ d.day }}</span>
+                  <span class="day-top-tools">
+                    {% if d.has_scheduled %}<span class="sched-badge" title="Eventos programados"></span>{% endif %}
+                    <button type="button" class="day-add-btn" data-add="{{ d.date }}" title="Añadir movimiento" aria-label="Añadir movimiento">＋</button>
+                  </span>
+                </div>
+                <div class="day-body">
+                  {% if d.spent > 0 %}<div class="amt spent">-{{ default_currency_sym }}{{ '%.2f'|format(d.spent) }}</div>{% endif %}
+                  {% if d.earned > 0 %}<div class="amt earned">+{{ default_currency_sym }}{{ '%.2f'|format(d.earned) }}</div>{% endif %}
+                  {% if d.transfers > 0 %}<div class="amt transfer">⇄ {{ d.transfers }}</div>{% endif %}
+                  {% if d.has_scheduled %}<div class="amt" style="color:var(--primary)">programado</div>{% endif %}
+                  {% if d.balance is not none %}<div class="amt balance {{ 'negative' if d.balance < 0 else '' }}" title="Saldo">{{ default_currency_sym }}{{ '%.2f'|format(d.balance) }}</div>{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+
+      {% elif view == 'week' %}
+        <div class="week-grid">
+          {% for d in week_days %}
+            <div class="week-day {{ 'today' if d.is_today else '' }}">
+              <div class="week-day-head">
+                <span class="wd">{{ d.weekday }}</span>
+                <span class="dn">{{ d.day }}</span>
+                <button type="button" class="mini-btn add-day" data-add="{{ d.date }}" title="Añadir movimiento">＋</button>
+              </div>
+              {% if d.balance is not none %}<div class="week-balance {{ 'negative' if d.balance < 0 else '' }}">{{ default_currency_sym }}{{ '%.2f'|format(d.balance) }}</div>{% endif %}
+              <div class="week-events compact">
+                {% for ev in d.records %}
+                  <div class="event">
+                    <div class="ev-left">
+                      <div class="ev-name">
+                        <span class="pill {{ ev.type }}">{{ 'Ingreso' if ev.type == 'income' else 'Transferencia' if ev.type == 'transfer' else 'Gasto' }}</span>
+                      </div>
+                      <div class="ev-sub">{{ ev.name }}{% if ev.time %} · {{ ev.time }}{% endif %}</div>
+                      {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener">📎</a>{% endif %}
+                    </div>
+                    <div class="event-actions">
+                      <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
+                      <div style="display:flex;gap:.25rem">
+                        <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="Editar">✎</button>
+                        <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="Eliminar">🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+                {% for ev in d.scheduled %}
+                  <div class="event">
+                    <div class="ev-left">
+                      <div class="ev-name"><span class="pill scheduled">Prog.</span></div>
+                      <div class="ev-sub">{{ ev.name }}</div>
+                    </div>
+                    <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
+                  </div>
+                {% endfor %}
+                {% if not d.records and not d.scheduled %}<div class="empty-note" style="font-size:.7rem;padding:.2rem 0">—</div>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+      {% elif view == 'year' %}
+        <div class="year-grid">
+          {% for m in months %}
+            <div class="year-month">
+              <a class="year-month-title" href="calendar?view=month&date={{ m.month_anchor }}">{{ m.name }}</a>
+              <div class="mini-month">
+                <div class="mini-weekdays">
+                  {% for w in ['L','M','X','J','V','S','D'] %}<span>{{ w }}</span>{% endfor %}
+                </div>
+                {% for week in m.weeks %}
+                  <div class="mini-week">
+                    {% for c in week %}
+                      {% if c %}
+                        <a class="mini-day {{ 'today' if c.is_today else '' }}" href="calendar?view=day&date={{ c.date }}" title="{{ c.date }} · Saldo {{ default_currency_sym }}{{ '%.2f'|format(c.balance) }}">
+                          <span class="mini-day-num">{{ c.day }}</span>
+                          <span class="mini-dots">
+                            {% if c.spent > 0 %}<i class="dot spent"></i>{% endif %}
+                            {% if c.earned > 0 %}<i class="dot earned"></i>{% endif %}
+                            {% if c.transfers > 0 %}<i class="dot transfer"></i>{% endif %}
+                            {% if c.has_scheduled %}<i class="dot scheduled"></i>{% endif %}
+                          </span>
+                        </a>
+                      {% else %}
+                        <span class="mini-day blank"></span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+      {% else %}
+        <div class="day-summary">
+          <span class="sum spent">Gastos: -{{ default_currency_sym }}{{ '%.2f'|format(day_totals.spent) }}</span>
+          <span class="sum earned">Ingresos: +{{ default_currency_sym }}{{ '%.2f'|format(day_totals.earned) }}</span>
+          <span class="sum balance {{ 'negative' if day_balance < 0 else '' }}">Saldo: {{ default_currency_sym }}{{ '%.2f'|format(day_balance) }}</span>
+          <button type="button" class="btn primary" data-add="{{ anchor }}" style="margin-left:auto">＋ Añadir movimiento</button>
+        </div>
+
+        {% if day_records %}
+          <div class="event-group-title">Movimientos del día</div>
+          {% for ev in day_records %}
+            <div class="event">
+              <div class="ev-left">
+                <div class="ev-name">
+                  <span class="pill {{ ev.type }}">{{ 'Ingreso' if ev.type == 'income' else 'Transferencia' if ev.type == 'transfer' else 'Gasto' }}</span>
+                  {{ ev.name }}
+                </div>
+                <div class="ev-sub">
+                  {% if ev.type == 'transfer' %}{{ ev.from_account }} → {{ ev.to_account }}{% else %}{{ ev.account }}{% endif %}
+                  {% if ev.category %} · {{ ev.category }}{% endif %}
+                  {% if ev.time %} · {{ ev.time }}{% endif %}
+                  {% if ev.notes %} · {{ ev.notes }}{% endif %}
+                </div>
+                {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener">📎 {{ ev.attachment_name or 'documento' }}</a>{% endif %}
+              </div>
+              <div class="event-actions">
+                <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
+                <div style="display:flex;gap:.25rem">
+                  <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="Editar">✎</button>
+                  <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="Eliminar">🗑</button>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if day_scheduled %}
+          <div class="event-group-title">Eventos programados</div>
+          {% for ev in day_scheduled %}
+            <div class="event">
+              <div class="ev-left">
+                <div class="ev-name"><span class="pill scheduled">Programado</span> {{ ev.name }}</div>
+                <div class="ev-sub">
+                  {% if ev.type == 'transfer' %}{{ ev.from_account }} → {{ ev.to_account }}{% else %}{{ ev.account }}{% endif %}
+                  {% if ev.category %} · {{ ev.category }}{% endif %}
+                  {% if ev.notes %} · {{ ev.notes }}{% endif %}
+                </div>
+              </div>
+              <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if not day_records and not day_scheduled %}
+          <div class="empty-note">No hay movimientos ni eventos programados para este día.</div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- day detail modal -->
+  <div class="overlay" id="day-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="day-title">—</h3>
+        <div class="head-actions">
+          <button class="btn primary" id="day-add" type="button" style="font-size:.8rem;padding:.45rem .85rem">＋ Añadir</button>
+          <button class="modal-close" id="day-close" type="button" aria-label="Cerrar">✕</button>
+        </div>
+      </div>
+      <div class="day-summary" id="day-summary"></div>
+      <div id="day-content"></div>
+    </div>
+  </div>
+
+  <!-- add / edit movement modal -->
+  <div class="overlay" id="editor-overlay">
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
+      <div class="modal-header">
+        <h3 id="editor-title">Añadir movimiento</h3>
+        <button class="modal-close" id="editor-close" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <form id="editor-form" class="form-grid" enctype="multipart/form-data">
+        <input type="hidden" name="type" id="editor-type" value="expense">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="editor-type-select">
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+            <option value="transfer">Transferencia</option>
+          </select>
+        </div>
+        <div class="field" id="field-name">
+          <label>Concepto</label>
+          <input type="text" name="name" id="editor-name" required>
+        </div>
+        <div class="field">
+          <label>Importe</label>
+          <input type="number" name="amount" id="editor-amount" step="0.01" min="0.01" required>
+        </div>
+        <div class="field" id="field-account">
+          <label>Cuenta</label>
+          <select name="account_id" id="editor-account"></select>
+        </div>
+        <div class="field" id="field-from">
+          <label>Desde</label>
+          <select name="from_account_id" id="editor-from"></select>
+        </div>
+        <div class="field" id="field-to">
+          <label>Hasta</label>
+          <select name="to_account_id" id="editor-to"></select>
+        </div>
+        <div class="field" id="field-category">
+          <label>Categoría</label>
+          <select name="category" id="editor-category"></select>
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" name="date" id="editor-date" required>
+        </div>
+        <div class="field">
+          <label>Hora (opcional)</label>
+          <input type="time" name="time" id="editor-time">
+        </div>
+        <div class="field">
+          <label>Notas</label>
+          <input type="text" name="notes" id="editor-notes">
+        </div>
+        <div class="field">
+          <label>Adjunto (opcional)</label>
+          <input type="file" name="attachment" id="editor-attachment">
+        </div>
+        <div class="field" id="field-remove" style="display:none">
+          <label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0;font-size:.82rem">
+            <input type="checkbox" name="remove_attachment" value="on" style="width:auto;min-height:0"> Quitar adjunto actual
+          </label>
+        </div>
+        <button class="btn primary" type="submit">Guardar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // ── theme ──────────────────────────────────────────────────────────────
+      const root = document.documentElement;
+      let theme = localStorage.getItem('pp_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const applyTheme = () => { root.setAttribute('data-theme', theme); };
+      applyTheme();
+
+      // ── server-injected data ───────────────────────────────────────────────
+      const VIEW = {{ view | tojson }};
+      const ANCHOR = {{ anchor | tojson }};
+      const FOCUS = {{ focus | tojson }};
+      const ACCOUNTS = {{ accounts | tojson }};
+      const EXPENSE_CATEGORIES = {{ expense_categories | tojson }};
+      const SERVER_RECORDS = {{ server_records | tojson }};
+      const DEFAULT_SYM = {{ default_currency_sym | tojson }};
+      const BASE_PATH = {{ base_path(request) | tojson }};
+      const RECORDS_BY_ID = {};
+      SERVER_RECORDS.forEach(r => { RECORDS_BY_ID[r.type + ':' + r.id] = r; });
+
+      const TYPE_LABEL = { expense: 'Gasto', income: 'Ingreso', transfer: 'Transferencia' };
+
+      function el(tag, cls, text) {
+        const node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      // ── month-view day detail modal ────────────────────────────────────────
+      const overlay = document.getElementById('day-overlay');
+      const titleEl = document.getElementById('day-title');
+      const summaryEl = document.getElementById('day-summary');
+      const contentEl = document.getElementById('day-content');
+      let currentDate = null;
+
+      function renderEvent(ev) {
+        const row = el('div', 'event');
+        const left = el('div', 'ev-left');
+        const nameRow = el('div', 'ev-name');
+        nameRow.appendChild(el('span', 'pill ' + ev.type, TYPE_LABEL[ev.type] || ev.type));
+        nameRow.appendChild(document.createTextNode(' ' + ev.name));
+        left.appendChild(nameRow);
+        const subParts = [];
+        if (ev.account) subParts.push(ev.account);
+        if (ev.from_account && ev.to_account) subParts.push(`${ev.from_account} → ${ev.to_account}`);
+        if (ev.category) subParts.push(ev.category);
+        if (ev.time) subParts.push(ev.time);
+        if (ev.notes) subParts.push(ev.notes);
+        if (subParts.length) left.appendChild(el('div', 'ev-sub', subParts.join(' · ')));
+        if (ev.attachment_path) {
+          const link = document.createElement('a');
+          link.className = 'attach';
+          link.href = BASE_PATH + (ev.attachment_path || '');
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = '📎 ' + (ev.attachment_name || 'documento');
+          left.appendChild(link);
+        }
+
+        const right = el('div', 'event-actions');
+        const amount = el('div', 'ev-amount ' + (ev.type === 'income' ? 'income' : ev.type === 'transfer' ? 'transfer' : 'expense'));
+        const sign = ev.type === 'income' ? '+' : ev.type === 'expense' ? '-' : '⇄ ';
+        amount.textContent = sign + ev.currency_sym + Number(ev.amount).toFixed(2);
+        right.appendChild(amount);
+
+        if (ev.id != null) {
+          const actions = el('div', '');
+          actions.style.display = 'flex';
+          actions.style.gap = '.25rem';
+          const editBtn = el('button', 'mini-btn', '✎');
+          editBtn.type = 'button';
+          editBtn.title = 'Editar';
+          editBtn.addEventListener('click', () => openEditor(ev));
+          const delBtn = el('button', 'mini-btn danger', '🗑');
+          delBtn.type = 'button';
+          delBtn.title = 'Eliminar';
+          delBtn.addEventListener('click', () => deleteRecord(ev));
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+          right.appendChild(actions);
+        }
+
+        row.appendChild(left);
+        row.appendChild(right);
+        return row;
+      }
+
+      async function openDay(dateStr) {
+        currentDate = dateStr;
+        titleEl.textContent = '…';
+        summaryEl.innerHTML = '';
+        contentEl.innerHTML = '';
+        overlay.classList.add('open');
+        try {
+          const resp = await fetch('api/calendar/day?date=' + encodeURIComponent(dateStr));
+          if (!resp.ok) throw new Error('error');
+          const data = await resp.json();
+          titleEl.textContent = data.label;
+          summaryEl.appendChild(el('span', 'sum spent', `Gastos: -${data.totals.spent.toFixed(2)}`));
+          summaryEl.appendChild(el('span', 'sum earned', `Ingresos: +${data.totals.earned.toFixed(2)}`));
+          if (data.balance != null) summaryEl.appendChild(el('span', 'sum balance' + (data.balance < 0 ? ' negative' : ''), `Saldo: ${DEFAULT_SYM}${data.balance.toFixed(2)}`));
+          if (data.records.length) {
+            contentEl.appendChild(el('div', 'event-group-title', 'Movimientos del día'));
+            data.records.forEach(r => contentEl.appendChild(renderEvent(r)));
+          }
+          if (data.scheduled.length) {
+            contentEl.appendChild(el('div', 'event-group-title', 'Eventos programados'));
+            data.scheduled.forEach(s => contentEl.appendChild(renderEvent({ ...s, time: null, attachment_path: null })));
+          }
+          if (!data.records.length && !data.scheduled.length) {
+            contentEl.appendChild(el('div', 'empty-note', 'No hay movimientos ni eventos programados para este día.'));
+          }
+        } catch (e) {
+          titleEl.textContent = 'Error';
+          contentEl.appendChild(el('div', 'empty-note', 'No se pudo cargar el detalle del día.'));
+        }
+      }
+
+      document.querySelectorAll('.day-cell').forEach(cell => {
+        cell.addEventListener('click', () => openDay(cell.dataset.date));
+      });
+      document.getElementById('day-add').addEventListener('click', () => openEditor(null));
+      document.getElementById('day-close').addEventListener('click', () => overlay.classList.remove('open'));
+
+      // ── add / edit / delete editor ─────────────────────────────────────────
+      const editorOverlay = document.getElementById('editor-overlay');
+      const editorForm = document.getElementById('editor-form');
+      let editingRecord = null;
+
+      function fillSelects() {
+        ['editor-account', 'editor-from', 'editor-to'].forEach(id => {
+          const sel = document.getElementById(id);
+          sel.innerHTML = '';
+          sel.appendChild(new Option('— selecciona —', ''));
+          ACCOUNTS.forEach(a => sel.appendChild(new Option(a.name, a.id)));
+        });
+        const catSel = document.getElementById('editor-category');
+        catSel.innerHTML = '';
+        catSel.appendChild(new Option('— automática —', ''));
+        EXPENSE_CATEGORIES.forEach(c => catSel.appendChild(new Option(c, c)));
+      }
+
+      function syncEditorType() {
+        const type = document.getElementById('editor-type').value;
+        const isTransfer = type === 'transfer';
+        const isExpense = type === 'expense';
+        document.getElementById('field-name').style.display = isTransfer ? 'none' : 'grid';
+        document.getElementById('field-account').style.display = isTransfer ? 'none' : 'grid';
+        document.getElementById('field-from').style.display = isTransfer ? 'grid' : 'none';
+        document.getElementById('field-to').style.display = isTransfer ? 'grid' : 'none';
+        document.getElementById('field-category').style.display = isExpense ? 'grid' : 'none';
+        // Disable irrelevant inputs so their empty values aren't submitted.
+        document.getElementById('editor-name').disabled = isTransfer;
+        document.getElementById('editor-account').disabled = isTransfer;
+        document.getElementById('editor-from').disabled = !isTransfer;
+        document.getElementById('editor-to').disabled = !isTransfer;
+        document.getElementById('editor-category').disabled = !isExpense;
+      }
+
+      function openEditor(record) {
+        editingRecord = record;
+        editorForm.reset();
+        document.getElementById('field-remove').style.display = 'none';
+        const typeSel = document.getElementById('editor-type-select');
+        typeSel.disabled = false;
+        const type = record ? record.type : 'expense';
+        document.getElementById('editor-type').value = type;
+        typeSel.value = type;
+        document.getElementById('editor-date').value = record ? record.date : (currentDate || ANCHOR);
+        document.getElementById('editor-name').value = record && record.name ? record.name : '';
+        document.getElementById('editor-amount').value = record ? record.amount : '';
+        document.getElementById('editor-time').value = record && record.time ? record.time : '';
+        document.getElementById('editor-notes').value = record && record.notes ? record.notes : '';
+        document.getElementById('editor-category').value = record && record.category ? record.category : '';
+        document.getElementById('editor-account').value = record && record.account_id ? record.account_id : '';
+        document.getElementById('editor-from').value = record && record.from_account_id ? record.from_account_id : '';
+        document.getElementById('editor-to').value = record && record.to_account_id ? record.to_account_id : '';
+        if (record) {
+          typeSel.disabled = true;
+          if (record.attachment_path) document.getElementById('field-remove').style.display = 'grid';
+        }
+        document.getElementById('editor-title').textContent = record ? 'Editar movimiento' : 'Añadir movimiento';
+        syncEditorType();
+        editorOverlay.classList.add('open');
+      }
+
+      function afterMutation(date) {
+        const params = new URLSearchParams(location.search);
+        params.set('view', VIEW);
+        params.set('date', ANCHOR);
+        if (VIEW === 'month') params.set('focus', date); else params.delete('focus');
+        location.href = location.pathname + '?' + params.toString();
+      }
+
+      async function deleteRecord(record) {
+        if (!confirm(`¿Eliminar "${record.name || 'movimiento'}"?`)) return;
+        const fd = new FormData();
+        fd.append('type', record.type);
+        fd.append('date', record.date);
+        try {
+          const resp = await fetch(`api/calendar/day/movement/${record.id}/delete`, { method: 'POST', body: fd });
+          if (!resp.ok) {
+            const data = await resp.json().catch(() => null);
+            alert(data?.error || 'No se pudo eliminar el movimiento.');
+            return;
+          }
+          afterMutation(record.date);
+        } catch (e) {
+          alert('Error de red al eliminar.');
+        }
+      }
+
+      editorForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(editorForm);
+        const date = fd.get('date');
+        const url = editingRecord
+          ? `api/calendar/day/movement/${editingRecord.id}/edit`
+          : `api/calendar/day/movement`;
+        try {
+          const resp = await fetch(url, { method: 'POST', body: fd });
+          const data = await resp.json().catch(() => null);
+          if (!resp.ok) {
+            alert(data?.error || 'No se pudo guardar el movimiento.');
+            return;
+          }
+          editorOverlay.classList.remove('open');
+          afterMutation(date);
+        } catch (err) {
+          alert('Error de red al guardar.');
+        }
+      });
+
+      document.getElementById('editor-type-select').addEventListener('change', (e) => {
+        document.getElementById('editor-type').value = e.target.value;
+        syncEditorType();
+      });
+      document.getElementById('editor-close').addEventListener('click', () => editorOverlay.classList.remove('open'));
+
+      // ── server-rendered (week/day) add/edit/delete hooks ──────────────────
+      document.querySelectorAll('[data-add]').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); currentDate = btn.dataset.add; openEditor(null); });
+      });
+      document.querySelectorAll('[data-edit-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rec = RECORDS_BY_ID[btn.dataset.editKey];
+          if (rec) openEditor(rec);
+        });
+      });
+      document.querySelectorAll('[data-del-key]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rec = RECORDS_BY_ID[btn.dataset.delKey];
+          if (rec) deleteRecord(rec);
+        });
+      });
+
+      // ── auto-open a focused day (after month-view mutation) ───────────────
+      fillSelects();
+      syncEditorType();
+      if (FOCUS) openDay(FOCUS);
+    })();
+  </script>
+{% include "profile_modal.html" %}
+{% include "apps_modal.html" %}
+</body>
+</html>
