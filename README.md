@@ -83,7 +83,6 @@ defaults.
 | `.recovery_key` | Password recovery code | ✅ required |
 | `.venv/` | Virtual environment | ✅ required to run |
 | `static/record_attachments/` | Uploaded document attachments (per user/type) | ✅ user data |
-| `.freebuff/project-id` | Freebuff project identifier | ✅ Freebuff |
 
 All of the above are ignored by git (see `.gitignore`).
 
