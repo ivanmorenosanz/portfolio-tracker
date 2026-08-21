@@ -636,3 +636,71 @@ def _enrich_generic_asset_names(db: Session, user_id: int) -> None:
 
     if changed:
         db.commit()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Historical CAGR for expected-return estimation
+# ──────────────────────────────────────────────────────────────────────────────
+_HISTORICAL_CAGR_CACHE: dict[str, tuple[float | None, float]] = {}  # ticker -> (rate_pct or None, fetched_at_epoch)
+_CAGR_TTL_SECONDS = 12 * 3600           # refresh at most every 12h
+_CAGR_FAIL_TTL_SECONDS = 15 * 60        # don't hammer yfinance if it just failed
+_CAGR_REQUEST_DELAY_SECONDS = 1.5       # be polite to Yahoo
+
+
+def fetch_historical_cagr(ticker: str, years: int = 5) -> Optional[float]:
+    """Annualized return (CAGR %) for `ticker` over the last `years` years.
+
+    Returns None if there's not enough history or the request fails.
+    Cached in-process for 12h on success / 15 min on failure, so per-page
+    load cost is one ~1.5s yfinance call per ticker at most.
+    """
+    if not ticker:
+        return None
+
+    ticker = ticker.upper()
+    now = time.time()
+    cached = _HISTORICAL_CAGR_CACHE.get(ticker)
+    if cached is not None:
+        rate, fetched_at = cached
+        if rate is not None and now - fetched_at < _CAGR_TTL_SECONDS:
+            return rate
+        if rate is None and now - fetched_at < _CAGR_FAIL_TTL_SECONDS:
+            return None
+
+    time.sleep(_CAGR_REQUEST_DELAY_SECONDS)
+    rate = _compute_historical_cagr_yfinance(ticker, years)
+    _HISTORICAL_CAGR_CACHE[ticker] = (rate, now)
+    return rate
+
+
+def _compute_historical_cagr_yfinance(ticker: str, years: int) -> Optional[float]:
+    """Pull ~`years`y of closes from yfinance and compute CAGR %.
+
+    CAGR = (end / start) ** (1 / years) - 1, expressed as a percentage.
+    Returns None when the series is too short (< 252 trading days
+    worth, ~1 year), empty, or invalid.
+    """
+    try:
+        import yfinance as yf
+        df = yf.Ticker(ticker).history(period=f"{years}y", auto_adjust=True)
+    except Exception as e:
+        print(f"[CAGR] yfinance history failed for {ticker}: {e}", flush=True)
+        return None
+
+    if df is None or df.empty or "Close" not in df.columns:
+        return None
+
+    closes = df["Close"].dropna()
+    if len(closes) < 252:  # need at least ~1 trading year
+        return None
+
+    start = float(closes.iloc[0])
+    end = float(closes.iloc[-1])
+    if start <= 0 or end <= 0:
+        return None
+
+    # Use the actual elapsed span in years (handles partial first/last buckets).
+    span_seconds = (closes.index[-1] - closes.index[0]).total_seconds()
+    span_years = max(span_seconds / (365.25 * 24 * 3600), 0.5)
+    cagr = (end / start) ** (1.0 / span_years) - 1.0
+    return round(cagr * 100.0, 3)

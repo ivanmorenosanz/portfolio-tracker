@@ -33,7 +33,7 @@
     body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px); background-size:28px 28px; mask-image:linear-gradient(180deg,rgba(0,0,0,.14),transparent 65%); }
     a,button,input,select { font:inherit; color:inherit; }
     .shell { max-width:1400px; margin:0 auto; padding:1.1rem 1.25rem 2.25rem; position:relative; }
-    .header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.1rem 1.15rem; margin-bottom:1rem; border:1px solid var(--border); border-radius:1.35rem; background:linear-gradient(135deg,color-mix(in oklab,var(--surface-strong) 82%,var(--accent) 8%) 0%,var(--surface) 58%,color-mix(in oklab,var(--surface) 92%,var(--primary) 8%) 100%); backdrop-filter:blur(14px); box-shadow:var(--shadow); }
+    .header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1.1rem 1.15rem; margin-bottom:1rem; border:1px solid var(--border); border-radius:1.35rem; background:linear-gradient(135deg,color-mix(in oklab,var(--surface-strong) 82%,var(--accent) 8%) 0%,var(--surface) 58%,color-mix(in oklab,var(--surface) 92%,var(--primary) 8%) 100%); backdrop-filter:blur(14px); box-shadow:var(--shadow); }
     .header-copy { display:grid; gap:.48rem; max-width:700px; }
     .kicker,.tag { display:inline-flex; width:max-content; padding:.32rem .68rem; border-radius:999px; background:color-mix(in oklab,var(--surface-strong) 72%,var(--accent) 28%); color:var(--text); font-size:.69rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
     h1 { font-size:clamp(2rem,4vw,3.35rem); letter-spacing:-.07em; line-height:.96; }
@@ -44,6 +44,13 @@
     .btn:hover { transform:translateY(-1px); background:color-mix(in oklab,var(--surface-strong) 78%,var(--primary) 22%); border-color:color-mix(in oklab,var(--border) 60%,var(--primary) 40%); }
     .btn-primary { color:#fff; background:linear-gradient(135deg,var(--primary),color-mix(in oklab,var(--primary) 75%,var(--accent) 25%)); border-color:transparent; }
     .btn-primary:hover { background:linear-gradient(135deg,var(--primary-hover),var(--primary)); }
+    .btn-icon { height:42px; padding:0; border-radius:999px; gap:0; overflow:hidden; transition:padding .18s ease; }
+    .btn-icon .icon-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; flex:0 0 42px; }
+    .btn-icon .icon-label { display:inline-block; max-width:0; opacity:0; overflow:hidden; white-space:nowrap; font-size:.85rem; font-weight:600; transition:max-width .18s ease, opacity .18s ease; }
+    .btn-icon:hover { padding-right:.9rem; transition-delay:.2s; }
+    .btn-icon:focus-visible { padding-right:.9rem; }
+    .btn-icon:hover .icon-label { max-width:160px; opacity:1; transition-delay:.2s; }
+    .btn-icon:focus-visible .icon-label { max-width:160px; opacity:1; }
     .layout { display:grid; grid-template-columns:minmax(280px,360px) minmax(0,1fr); gap:1rem; align-items:start; }
     .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem; box-shadow:var(--shadow-soft); backdrop-filter:blur(14px); overflow:hidden; }
     .card::before { content:""; display:block; height:1px; margin:-1.1rem -1.1rem 1rem; background:linear-gradient(90deg,color-mix(in oklab,var(--accent) 55%,transparent),transparent 65%); }
@@ -129,7 +136,7 @@
     .disclaimer { color:var(--muted); font-size:.72rem; line-height:1.5; }
     .tag { font-size:.61rem; padding:.2rem .48rem; background:color-mix(in oklab,var(--primary) 12%,var(--surface)); color:var(--primary); letter-spacing:.08em; }
     @media (max-width:1050px) { .layout { grid-template-columns:1fr; } .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .form-divider,.assumption { grid-column:1/-1; } }
-    @media (max-width:720px) { .shell { padding:.8rem .75rem 1.5rem; } .header { padding:.9rem; } .header-copy p { font-size:.86rem; } .actions { justify-content:flex-start; width:100%; } .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .cost-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .form-divider,.assumption { grid-column:auto; } .btn { flex:1; } .modal-form-grid,.recommendation-metrics { grid-template-columns:1fr; } }
+    @media (max-width:720px) { .shell { padding:.8rem .75rem 1.5rem; } .header { padding:.9rem; } .header-copy p { font-size:.86rem; } .actions { justify-content:flex-start; width:100%; } .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .cost-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .form-divider,.assumption { grid-column:auto; } .btn { flex:1; } .btn-icon { flex:0 0 42px; width:42px; } .modal-form-grid,.recommendation-metrics { grid-template-columns:1fr; } }
     @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; } }
   </style>
 </head>
@@ -143,10 +150,9 @@
       </div>
       <div class="actions">
         <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
-        <button class="btn" type="button" data-apps-trigger aria-label="Aplicaciones" title="Aplicaciones"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg><span>Apps</span></button>
-        <a class="btn" href="." aria-label="Volver al dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><span>Dashboard</span></a>
-        <a class="btn" href="expenses/history" aria-label="Movimientos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg><span>Movimientos</span></a>
-        <a class="btn" href="calendar" aria-label="Calendario"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>Calendario</span></a>
+        <a class="btn btn-icon" href="." aria-label="Volver al dashboard"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">Dashboard</span></a>
+        <a class="btn btn-icon" href="expenses/history" aria-label="Movimientos"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span><span class="icon-label">Movimientos</span></a>
+        <a class="btn btn-icon" href="calendar" aria-label="Calendario"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">Calendario</span></a>
       </div>
     </header>
 

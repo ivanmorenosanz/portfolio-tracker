@@ -2,10 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
 
 from auth import router as auth_router
-from config import SECRET_KEY, STATIC_DIR
+from config import STATIC_DIR
 from database import ensure_schema
 import scheduler as scheduler_module
 import services
@@ -46,7 +45,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Portfolio Pi", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, session_cookie="pp_session", max_age=60 * 60 * 24 * 30)
+# SessionMiddleware is GONE: auth is now driven by the JWT cookie issued by the
+# shared `auth/` service (see auth/auth_client.py). There's no Starlette session
+# to keep, drop the middleware.
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -58,19 +59,29 @@ async def prefix_redirects(request: Request, call_next):
     Location headers; this middleware re-adds the prefix (only when the proxy
     says it stripped one, via X-Portfolio-Prefix) so the browser ends up on the
     correct URL. Direct/LAN requests have no header and are untouched.
+
+    Exception: paths owned by the SHARED auth service (/login, /logout,
+    /api/auth/*) are served at the bare path on the same domain — adding the
+    /Portfolio/ prefix would route them back to this app. They must stay
+    unprefixed so Caddy's matching reverse_proxy rules can deliver them
+    to the auth service.
     """
     prefix = (request.headers.get("x-portfolio-prefix") or "").rstrip("/")
     response = await call_next(request)
     location = response.headers.get("location")
-    if (
-        prefix
-        and location
-        and location.startswith("/")
-        and not location.startswith("//")
-        and location != prefix
-        and not location.startswith(prefix + "/")
-    ):
-        response.headers["location"] = prefix + location
+    if not (prefix and location and location.startswith("/") and not location.startswith("//")):
+        return response
+
+    # Don't rewrite paths that belong to the shared auth service.
+    AUTH_OWNED_PREFIXES = ("/login", "/logout", "/api/auth/")
+    if any(location.startswith(p) for p in AUTH_OWNED_PREFIXES):
+        return response
+
+    # Skip if it already has the prefix or is the root alias.
+    if location == prefix or location.startswith(prefix + "/"):
+        return response
+
+    response.headers["location"] = prefix + location
     return response
 
 app.include_router(auth_router)

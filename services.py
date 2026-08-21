@@ -567,13 +567,6 @@ def run_scheduled_transfers() -> int:
     return _run_scheduled_money_movements("transfer", TransferSchedule, _execute_transfer_schedule)
 
 
-def _annual_from_rate(amount: float, rate_pct: float) -> float:
-    """Expected annual return for `amount` at a quoted annual rate `rate_pct` %."""
-    if amount <= 0 or not rate_pct or rate_pct <= 0:
-        return 0.0
-    return amount * rate_pct / 100.0
-
-
 def _promo_active(promo: "InterestPromo") -> bool:
     now = datetime.utcnow()
     if promo.start_date and now < promo.start_date:
@@ -581,52 +574,6 @@ def _promo_active(promo: "InterestPromo") -> bool:
     if promo.end_date and now >= promo.end_date:
         return False
     return True
-
-
-def _calculate_cash_interest(holding: Holding, balance: float) -> float:
-    """Cash interest = account base rate + any active promos.
-
-    Promos are applied as a waterfall over the balance (in creation order), and
-    the uncovered remainder falls back to the base rate. Expired/future promos
-    are skipped automatically, so offers can simply be given an end date.
-    """
-    base_rate = holding.asset.ter or 0.0
-    promos = sorted((p for p in holding.promos if _promo_active(p)), key=lambda p: p.id)
-    remaining = balance
-    total = 0.0
-    for p in promos:
-        if remaining <= 0:
-            break
-        if p.mode == "balance":
-            cap = p.cap if p.cap and p.cap > 0 else remaining
-            slice_amount = min(remaining, cap)
-        elif p.mode == "new":
-            new_money = max(0.0, balance - (p.baseline or 0.0))
-            cap = p.cap if p.cap and p.cap > 0 else new_money
-            slice_amount = min(new_money, cap, remaining)
-        else:
-            continue
-        if slice_amount <= 0:
-            continue
-        total += _annual_from_rate(slice_amount, p.rate)
-        remaining -= slice_amount
-    total += _annual_from_rate(remaining, base_rate)
-    return total
-
-
-def _calculate_expected_annual_return(holding: Holding, market_value: float) -> float:
-    """Expected annual return for a holding.
-
-    Cash: base rate + configurable interest promos (see InterestPromo).
-    Non-cash: the asset TER applied with daily compounding (legacy behavior).
-    """
-    if not market_value or market_value <= 0:
-        return 0.0
-
-    if holding.asset.asset_type == "cash":
-        return _calculate_cash_interest(holding, market_value)
-
-    return _annual_from_rate(market_value, holding.asset.ter or 0.0)
 
 
 def snapshot_data(db: Session, user_id: int):
@@ -767,8 +714,6 @@ def snapshot_data(db: Session, user_id: int):
         totals_by_account[h.account.name] = totals_by_account.get(h.account.name, 0.0) + market_value
         totals_by_type[h.asset.asset_type] = totals_by_type.get(h.asset.asset_type, 0.0) + market_value
 
-        expected_annual = _calculate_expected_annual_return(h, market_value)
-
         promos_payload = [
             {
                 "id": p.id,
@@ -810,8 +755,6 @@ def snapshot_data(db: Session, user_id: int):
             "split_date": h.split_date,
             "split_ter": h.split_ter,
             "new_quantity": h.new_quantity,
-            "expected_annual": expected_annual,
-            "effective_rate": round((expected_annual / market_value * 100.0), 3) if market_value > 0 else 0.0,
             "promos": promos_payload,
             "auto_enabled": bool((ac := auto_map.get(h.id)) and ac.enabled),
             "auto_amount": ac.amount if ac else None,
@@ -896,10 +839,11 @@ def snapshot_data(db: Session, user_id: int):
             "suggestion": suggestion,
         })
 
-    total_expected_annual = sum(r["expected_annual"] for r in rows)
     profit_loss = total_value - total_cost
     profit_loss_pct = (profit_loss / total_cost * 100.0) if total_cost > 0 else 0.0
     invested_pct = (invested_cost / total_value * 100.0) if total_value > 0 else 0.0
+    cash_value = totals_by_type.get("cash", 0.0)
+    cash_pct = (cash_value / total_value * 100.0) if total_value > 0 else 0.0
 
     return {
         "goals": goals,
@@ -907,6 +851,8 @@ def snapshot_data(db: Session, user_id: int):
         "total_value": total_value,
         "invested_value": invested_cost,
         "invested_pct": invested_pct,
+        "cash_value": cash_value,
+        "cash_pct": cash_pct,
         "profit_loss": profit_loss,
         "profit_loss_pct": profit_loss_pct,
         "totals_by_account": totals_by_account,
@@ -915,7 +861,6 @@ def snapshot_data(db: Session, user_id: int):
         "last_refresh": _to_madrid(lr) if (lr := db.query(func.max(Asset.last_updated)).scalar()) else None,
         "default_currency": DEFAULT_CURRENCY,
         "default_currency_sym": _sym(DEFAULT_CURRENCY),
-        "total_expected_annual": total_expected_annual,
         "recurring_contributions": recurring_contributions,
         "recurring_expenses": recurring_expenses,
         "recurring_incomes": recurring_incomes,

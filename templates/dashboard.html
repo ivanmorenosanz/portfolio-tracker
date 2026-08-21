@@ -551,8 +551,8 @@
         <div class="kpi-value">{{ default_currency_sym }}{{ '%.2f'|format(total_value) }}</div>
         <div class="kpi-divider"></div>
         <div class="kpi-row">
-          <span class="muted">Invertido (fondos/acciones)</span>
-          <span>{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }} <span class="muted" style="font-size:.78rem">· {{ '%.1f'|format(invested_pct) }}%</span></span>
+          <span class="muted">Liquidez (efectivo)</span>
+          <span>{{ default_currency_sym }}{{ '%.2f'|format(cash_value) }} <span class="muted" style="font-size:.78rem">· {{ '%.1f'|format(cash_pct) }}%</span></span>
         </div>
         <div class="kpi-row" style="margin-top:.35rem">
           <span class="muted">P/L</span>
@@ -580,18 +580,18 @@
         {% endif %}
       </div>
 
-      <!-- rendimiento esperado -->
-      <div class="card card-clickable" id="open-expected-returns-modal" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="expected-returns-overlay" aria-label="Ver detalles de rendimiento esperado anual">
-        <div class="card-label">Rendimiento esperado anual</div>
-        <div class="kpi-value positive">{{ default_currency_sym }}{{ '%.2f'|format(total_expected_annual) }}</div>
+      <!-- interés compuesto -->
+      <div class="card card-clickable" id="open-compound-interest-modal" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="compound-interest-overlay" aria-label="Abrir calculadora de interés compuesto">
+        <div class="card-label">Interés compuesto</div>
+        <div class="kpi-value positive">{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }}</div>
         <div class="kpi-divider"></div>
         <div class="kpi-row">
-          <span class="muted">Mensual estimado</span>
-          <span class="positive">{{ default_currency_sym }}{{ '%.2f'|format(total_expected_annual / 12) }}</span>
+          <span class="muted">Capital invertido</span>
+          <span class="positive">{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }}</span>
         </div>
         <div class="kpi-row" style="margin-top:.35rem">
-          <span class="muted">Estimación</span>
-          <span class="muted" style="font-size:.78rem">5y CAGR · yfinance</span>
+          <span class="muted">Proyección</span>
+          <span class="muted" style="font-size:.78rem">Fondos · acciones · ETF</span>
         </div>
       </div>
 
@@ -852,53 +852,50 @@
   </main>
 </div>
 
-<!-- modal: detalle rendimiento esperado -->
-<div class="overlay" id="expected-returns-overlay" role="dialog" aria-modal="true" aria-labelledby="expected-returns-modal-title">
-  <div class="modal" style="max-width:760px">
+<!-- modal: calculadora de interés compuesto -->
+<div class="overlay" id="compound-interest-overlay" role="dialog" aria-modal="true" aria-labelledby="compound-interest-modal-title">
+  <div class="modal" style="max-width:1100px;width:100%">
     <div class="modal-header">
-      <h2 id="expected-returns-modal-title">Rendimiento esperado anual</h2>
-      <button class="btn btn-icon btn-ghost" id="close-expected-returns-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="compound-interest-modal-title">Calculadora de interés compuesto</h2>
+      <button class="btn btn-icon btn-ghost" id="close-compound-interest-modal" type="button" aria-label="Cerrar">✕</button>
     </div>
     <p class="muted" style="font-size:.84rem;margin-bottom:.9rem">
-      Estimación basada en la rentabilidad anualizada (CAGR) a 5 años del ticker vía yfinance.
-      Si no hay historial suficiente, se usa el TER configurado como aproximación.
-      <strong>Los resultados pasados no garantizan resultados futuros.</strong>
+      Ajusta el plazo, el tipo anual y la aportación mensual de cada fondo, acción o ETF.
+      El cálculo usa capitalización mensual y no garantiza rentabilidades futuras.
     </p>
+    <div class="field" style="max-width:260px;margin-bottom:1rem">
+      <label for="compound-years">Plazo (años)</label>
+      <input id="compound-years" type="number" min="1" max="60" step="1" value="10">
+    </div>
+    <div class="detail-grid" style="margin-bottom:1rem">
+      <div class="detail-cell"><div class="detail-label">Capital inicial</div><div class="detail-value" id="compound-summary-initial">—</div></div>
+      <div class="detail-cell"><div class="detail-label">Aportaciones</div><div class="detail-value" id="compound-summary-contributions">—</div></div>
+      <div class="detail-cell"><div class="detail-label">Valor final</div><div class="detail-value positive" id="compound-summary-final">—</div></div>
+      <div class="detail-cell"><div class="detail-label">Interés generado</div><div class="detail-value positive" id="compound-summary-interest">—</div></div>
+    </div>
     <div class="table-wrap">
-      <table>
+      <table id="compound-interest-table">
         <thead>
-          <tr><th>Cuenta</th><th>Activo</th><th>Valor</th><th>Tipo efectivo</th><th>Anual esperado</th><th>Mensual esperado</th></tr>
+          <tr><th>Cuenta</th><th>Activo</th><th>Capital inicial</th><th>Tipo anual</th><th>Aportación mensual</th><th>Valor final</th><th>Interés generado</th></tr>
         </thead>
         <tbody>
-          {% for row in holdings if row.expected_annual > 0 %}
-          <tr>
+          {% for row in holdings if row.asset_type in ['fund', 'stock', 'etf'] and row.market_value > 0 %}
+          <tr data-compound-row data-currency-symbol="{{ row.currency_sym }}">
             <td>{{ row.account }}</td>
-            <td>{{ row.asset }}</td>
-            <td>{{ row.currency_sym }}{{ '%.2f'|format(row.market_value) }}</td>
-            <td class="positive">
-              {{ '%.2f'|format(row.expected_rate_pct) }}%
-              {% if row.expected_rate_basis %}
-              <div class="muted" style="font-size:.72rem;font-weight:500;line-height:1.1">{{ row.expected_rate_basis }}</div>
-              {% endif %}
-            </td>
-            <td class="positive">{{ row.currency_sym }}{{ '%.2f'|format(row.expected_annual) }}</td>
-            <td class="muted">{{ row.currency_sym }}{{ '%.2f'|format(row.expected_annual / 12) }}</td>
+            <td>{{ row.asset }}<div class="muted" style="font-size:.72rem">{{ row.asset_type }}</div></td>
+            <td><input class="compound-principal" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.market_value) }}" aria-label="Capital inicial de {{ row.asset }}"></td>
+            <td><input class="compound-rate" type="number" min="-99.99" max="1000" step="0.01" value="5" aria-label="Tipo anual de {{ row.asset }}">%</td>
+            <td><input class="compound-monthly" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.auto_amount or 0) }}" aria-label="Aportación mensual para {{ row.asset }}"></td>
+            <td class="compound-final positive">—</td>
+            <td class="compound-interest positive">—</td>
           </tr>
           {% else %}
-          <tr>
-            <td colspan="6" class="muted" style="padding:1rem .8rem;text-align:center">No hay posiciones con tipo de interés o rendimiento configurado.</td>
-          </tr>
+          <tr><td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">No hay fondos, acciones o ETF con valor positivo para calcular.</td></tr>
           {% endfor %}
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="4" style="font-weight:600">Total</td>
-            <td class="positive" style="font-weight:600">{{ default_currency_sym }}{{ '%.2f'|format(total_expected_annual) }}</td>
-            <td class="muted" style="font-weight:600">{{ default_currency_sym }}{{ '%.2f'|format(total_expected_annual / 12) }}</td>
-          </tr>
-        </tfoot>
       </table>
     </div>
+    <p class="muted" style="font-size:.72rem;margin-top:.8rem">Las sumas del resumen mezclan los importes tal como aparecen en cada posición; usa posiciones de la misma divisa para una suma total significativa.</p>
   </div>
 </div>
 
@@ -1376,18 +1373,66 @@
       });
     });
 
-    const expectedReturnsOverlay = document.getElementById('expected-returns-overlay');
-    const openExpectedReturns = () => expectedReturnsOverlay.classList.add('open');
-    const closeExpectedReturns = () => expectedReturnsOverlay.classList.remove('open');
-    const expectedCard = document.getElementById('open-expected-returns-modal');
-    expectedCard?.addEventListener('click', openExpectedReturns);
-    expectedCard?.addEventListener('keydown', (e) => {
+    // ── compound-interest calculator ───────────────────────────────────────
+    const compoundOverlay = document.getElementById('compound-interest-overlay');
+    const compoundYears = document.getElementById('compound-years');
+    const compoundRows = [...document.querySelectorAll('[data-compound-row]')];
+    const compoundCurrency = '{{ default_currency_sym }}';
+    const compoundMoney = (value, symbol = compoundCurrency) => `${symbol}${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    function calculateCompoundInterest() {
+      const years = Math.max(1, Math.min(60, Number(compoundYears?.value) || 1));
+      if (compoundYears) compoundYears.value = years;
+      const months = years * 12;
+      let initialTotal = 0;
+      let contributionsTotal = 0;
+      let finalTotal = 0;
+
+      compoundRows.forEach((row) => {
+        const principal = Math.max(0, Number(row.querySelector('.compound-principal')?.value) || 0);
+        const annualRate = Number(row.querySelector('.compound-rate')?.value) || 0;
+        const monthlyContribution = Math.max(0, Number(row.querySelector('.compound-monthly')?.value) || 0);
+        const monthlyRate = annualRate / 100 / 12;
+        const growth = Math.pow(1 + monthlyRate, months);
+        const compoundedPrincipal = principal * growth;
+        const compoundedContributions = Math.abs(monthlyRate) < 1e-12
+          ? monthlyContribution * months
+          : monthlyContribution * ((growth - 1) / monthlyRate);
+        const finalValue = compoundedPrincipal + compoundedContributions;
+        const totalContributions = monthlyContribution * months;
+        const interest = finalValue - principal - totalContributions;
+
+        initialTotal += principal;
+        contributionsTotal += totalContributions;
+        finalTotal += finalValue;
+        const rowCurrency = row.dataset.currencySymbol || compoundCurrency;
+        row.querySelector('.compound-final').textContent = compoundMoney(finalValue, rowCurrency);
+        row.querySelector('.compound-interest').textContent = compoundMoney(interest, rowCurrency);
+      });
+
+      document.getElementById('compound-summary-initial').textContent = compoundMoney(initialTotal);
+      document.getElementById('compound-summary-contributions').textContent = compoundMoney(contributionsTotal);
+      document.getElementById('compound-summary-final').textContent = compoundMoney(finalTotal);
+      document.getElementById('compound-summary-interest').textContent = compoundMoney(finalTotal - initialTotal - contributionsTotal);
+    }
+
+    const openCompoundInterest = () => {
+      calculateCompoundInterest();
+      compoundOverlay?.classList.add('open');
+    };
+    const closeCompoundInterest = () => compoundOverlay?.classList.remove('open');
+    const compoundCard = document.getElementById('open-compound-interest-modal');
+    compoundCard?.addEventListener('click', openCompoundInterest);
+    compoundCard?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openExpectedReturns();
+        openCompoundInterest();
       }
     });
-    document.getElementById('close-expected-returns-modal')?.addEventListener('click', closeExpectedReturns);
+    document.getElementById('close-compound-interest-modal')?.addEventListener('click', closeCompoundInterest);
+    compoundYears?.addEventListener('input', calculateCompoundInterest);
+    compoundRows.forEach((row) => row.querySelectorAll('input').forEach((input) => input.addEventListener('input', calculateCompoundInterest)));
+    calculateCompoundInterest();
 
     // ── edit modal ────────────────────────────────────────────────────────
     const editOverlay = document.getElementById('edit-overlay');
@@ -2001,7 +2046,8 @@
                 pointRadius: 0,
                 pointHoverRadius: 3,
                 fill: false,
-                stepped: 'after',
+                tension: 0.35,
+                cubicInterpolationMode: 'monotone',
                 spanGaps: true,
               },
               {
@@ -2013,7 +2059,8 @@
                 pointRadius: 0,
                 pointHoverRadius: 3,
                 fill: false,
-                stepped: 'after',
+                tension: 0.35,
+                cubicInterpolationMode: 'monotone',
                 spanGaps: true,
               },
               {
@@ -2025,7 +2072,8 @@
                 pointRadius: 0,
                 pointHoverRadius: 3,
                 fill: false,
-                stepped: 'after',
+                tension: 0.35,
+                cubicInterpolationMode: 'monotone',
                 spanGaps: true,
               },
               {
@@ -2040,7 +2088,8 @@
                 pointRadius: 1.5,
                 pointHoverRadius: 5,
                 fill: 'origin',
-                stepped: 'after',
+                tension: 0.35,
+                cubicInterpolationMode: 'monotone',
                 spanGaps: true,
                 order: 0,
               },

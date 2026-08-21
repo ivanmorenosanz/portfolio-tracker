@@ -455,19 +455,40 @@ def delete_saved_mortgage(request: Request, scenario_id: int):
 
 @router.post("/profile/preferences")
 def update_profile_preferences(request: Request, language: str = Form("es")):
+    """Update the user's language on the shared auth service.
+
+    The auth service re-mints a fresh JWT carrying the new `lang` claim and
+    sets it on the response cookie; subsequent reads in this app pick up the
+    new language automatically (no local DB write needed).
+    """
     uid, redir = _require_auth(request)
     if redir:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
     if language not in {"es", "en"}:
         return JSONResponse({"error": "Idioma no válido."}, status_code=400)
-    with SessionLocal() as db:
-        user = db.get(User, uid)
-        if not user:
-            return JSONResponse({"error": "Usuario no encontrado."}, status_code=404)
-        user.language = language
-        db.commit()
-    request.session["language"] = language
-    return JSONResponse({"ok": True, "language": language})
+
+    # Forward to the auth service. The auth service returns 200 + a fresh
+    # session cookie; we want that cookie set on the browser that's calling
+    # us, so we copy its Set-Cookie header onto our response.
+    import requests as _req  # Portfolio already has `requests` in requirements.txt
+    token = request.cookies.get("app_session", "")
+    auth_url = "http://127.0.0.1:8002/api/auth/language"
+    try:
+        r = _req.post(auth_url, data={"language": language},
+                      headers={"Cookie": f"app_session={token}"}, timeout=10.0)
+    except Exception as e:
+        return JSONResponse({"error": f"No se pudo contactar al servicio de auth: {e}"}, status_code=502)
+    if r.status_code != 200:
+        try: detail = r.json().get("detail", "Error del servicio de auth.")
+        except Exception: detail = "Error del servicio de auth."
+        return JSONResponse({"error": detail}, status_code=r.status_code)
+
+    out = JSONResponse({"ok": True, "language": language})
+    sc = r.headers.get("set-cookie")
+    if sc:
+        # Pass Set-Cookie through verbatim so the browser stores the new JWT.
+        out.headers.append("set-cookie", sc)
+    return out
 
 
 @router.post("/profile/password")

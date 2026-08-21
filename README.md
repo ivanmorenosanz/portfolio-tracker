@@ -89,8 +89,8 @@ All of the above are ignored by git (see `.gitignore`).
 ## Features
 
 - **Dashboard** — positions, account/type/geographic/sector allocation,
-  expected-annual-return (Rendimiento esperado), portfolio value & invested
-  trend charts with daily P&L markers.
+  an interactive compound-interest calculator for funds, stocks and ETFs,
+  portfolio value & invested trend charts with daily P&L markers.
 - **Accounts & positions** — cash and investment accounts; buy/sell/edit
   holdings; manual or fetched prices.
 - **Market data** — hourly price refresh (5-min scheduler tick), single-ticker
