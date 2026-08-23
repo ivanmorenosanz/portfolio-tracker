@@ -64,7 +64,7 @@
               <tr>
                 <td>{{ c.name }}</td>
                 <td>{{ c.account }}</td>
-                <td>{{ t('cards.type.' + c.card_type, c.card_type) }}</td>
+                <td>{{ t('cards.type.' + c.card_type) }}</td>
                 <td>
                   {% if c.card_type == 'debit' %}
                     {{ t('cards.settle.immediate') }}
