@@ -1,29 +1,49 @@
 <style>
   .cards-trigger { cursor:pointer; }
+  /* Overlay: same treatment as profile modal */
   .cards-overlay { position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(0,0,0,.38); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .18s ease; }
   .cards-overlay.open { opacity:1; pointer-events:auto; }
-  .cards-modal { width:min(100%,640px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius,1.15rem); background:var(--surface-strong,#fffdf9); color:var(--text); box-shadow:var(--shadow, 0 18px 55px rgba(0,0,0,.2)); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
+  .cards-modal { width:min(100%,520px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius,1.15rem); background:var(--surface-strong,#fffdf9); color:var(--text); box-shadow:var(--shadow, 0 18px 55px rgba(0,0,0,.2)); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
   .cards-overlay.open .cards-modal { transform:translateY(0) scale(1); }
+
   .cards-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:1rem; }
   .cards-modal-head h2 { font-size:1.15rem; letter-spacing:-.03em; }
   .cards-modal-head p { color:var(--muted); font-size:.78rem; margin-top:.2rem; }
-  .cards-close { width:34px; height:34px; min-height:34px; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-2); cursor:pointer; font-size:1.1rem; }
-  .cards-table { width:100%; font-size:.8rem; border-collapse:collapse; margin-bottom:1.1rem; }
-  .cards-table th { text-align:left; color:var(--muted); font-size:.64rem; letter-spacing:.08em; text-transform:uppercase; padding:.45rem .5rem; border-bottom:1px solid var(--border); }
-  .cards-table td { padding:.5rem; border-bottom:1px solid var(--border); }
-  .cards-table tr:last-child td { border-bottom:none; }
-  .cards-table td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .cards-form { display:grid; gap:.65rem; border-top:1px solid var(--border); padding-top:1rem; }
-  .cards-form h3 { font-size:.9rem; margin-bottom:.1rem; }
+  .cards-close { width:34px; height:34px; min-height:34px; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-2); cursor:pointer; font-size:1.1rem; flex-shrink:0; }
+
+  /* Card list as bordered rows instead of a full-bleed table */
+  .cards-list { display:grid; gap:.6rem; margin-bottom:1.1rem; }
+  .cards-item { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem .9rem; border:1px solid var(--border); border-radius:var(--radius-sm,.8rem); background:color-mix(in oklab,var(--surface-strong,#fffdf9) 60%,var(--surface-2) 40%); }
+  .cards-item-main { display:grid; gap:.15rem; min-width:0; }
+  .cards-item-name { font-weight:700; font-size:.88rem; letter-spacing:-.01em; }
+  .cards-item-meta { color:var(--muted); font-size:.74rem; line-height:1.4; }
+  .cards-item-pending { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-size:.8rem; }
+  .cards-item-pending .muted { color:var(--muted); font-size:.72rem; }
+  .cards-item-actions { display:flex; align-items:center; gap:.35rem; flex-shrink:0; }
+
+  /* Buttons */
+  .cards-btn-edit, .cards-btn-danger { width:30px; height:30px; padding:0; border:1px solid var(--border); border-radius:.6rem; background:var(--surface-strong,#fffdf9); cursor:pointer; font-size:.85rem; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; }
+  .cards-btn-edit:hover, .cards-btn-danger:hover { border-color:var(--primary); color:var(--primary); }
+  .cards-btn-danger:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* Forms */
+  .cards-form { display:grid; gap:.65rem; border-top:1px solid var(--border); margin-top:1.1rem; padding-top:1.1rem; }
+  .cards-form h3 { font-size:.9rem; letter-spacing:-.02em; margin-bottom:.1rem; }
   .cards-field { display:grid; gap:.25rem; }
   .cards-field label { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
   .cards-field input, .cards-field select { width:100%; min-height:42px; padding:.58rem .9rem; border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong,#fffdf9) 66%,var(--surface-2) 34%); color:var(--text); font:inherit; }
-  .cards-field small { color:var(--muted); font-size:.72rem; }
-  .cards-btn-edit { background:none; border:none; cursor:pointer; font-size:.95rem; margin-right:.3rem; }
-  .cards-btn-danger { color:#c0392b; background:none; border:none; cursor:pointer; font-size:.95rem; }
-  @media (max-width:520px) { .cards-modal { padding:1rem; } }
+  .cards-field input:focus, .cards-field select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in oklab,var(--primary) 18%,transparent); }
+  .cards-field small { color:var(--muted); font-size:.72rem; line-height:1.45; }
+  .cards-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+  .profile-btn-primary { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:.58rem .85rem; border-radius:999px; cursor:pointer; font-weight:600; }
+
+  @media (max-width:520px) {
+    .cards-modal { padding:1rem; }
+    .cards-row-2 { grid-template-columns:1fr; }
+  }
 </style>
 
+<input type="hidden" id="cards-base" value="{{ base_path(request) }}">
 <div class="cards-overlay" id="cards-overlay" role="dialog" aria-modal="true" aria-labelledby="cards-modal-title">
   <div class="cards-modal">
     <div class="cards-modal-head">
@@ -35,46 +55,36 @@
     </div>
 
     {% if credit_cards %}
-    <table class="cards-table">
-      <thead><tr>
-        <th>{{ t('cards.col.name') }}</th>
-        <th>{{ t('cards.col.account') }}</th>
-        <th>{{ t('cards.col.type') }}</th>
-        <th>{{ t('cards.col.settlement') }}</th>
-        <th class="num">{{ t('cards.col.pending') }}</th>
-        <th></th>
-      </tr></thead>
-      <tbody>
-        {% for c in credit_cards %}
-        <tr>
-          <td>{{ c.name }}</td>
-          <td>{{ c.account }}</td>
-          <td>{{ t('cards.type.' + c.card_type) }}</td>
-          <td>
-            {% if c.card_type == 'debit' %}
-              {{ t('cards.settle.immediate') }}
-            {% elif c.settlement == 'salary' %}
-              {{ t('cards.settle.salary') }}{% if c.discount_pct %} (−{{ '%.0f'|format(c.discount_pct) }}%){% endif %}
-            {% else %}
-              {{ t('cards.settle.manual') }}
+    <div class="cards-list">
+      {% for c in credit_cards %}
+      <div class="cards-item">
+        <div class="cards-item-main">
+          <span class="cards-item-name">{{ c.name }}</span>
+          <span class="cards-item-meta">
+            {{ c.account }} · {{ t('cards.type.' + c.card_type) }}
+            {% if c.card_type == 'credit' %}
+              · {% if c.settlement == 'salary' %}{{ t('cards.settle.salary') }}{% if c.discount_pct %} (−{{ '%.0f'|format(c.discount_pct) }}%){% endif %}{% else %}{{ t('cards.settle.manual') }}{% endif %}
             {% endif %}
-          </td>
-          <td class="num">
-            {% if c.card_type == 'credit' and c.pending > 0 %}
-              {{ default_currency_sym }}{{ '%.2f'|format(c.pending) }}
-              {% if c.discount_pct %}<span class="muted">(neto {{ default_currency_sym }}{{ '%.2f'|format(c.net_pending) }})</span>{% endif %}
-            {% else %}—{% endif %}
-          </td>
-          <td style="white-space:nowrap;">
-            <button type="button" class="cards-btn-edit cards-trigger-edit" data-card='{{ c | tojson }}' data-account-id="{{ card_account_ids.get(c.id) if card_account_ids else '' }}" title="{{ t('cards.edit') }}">✎</button>
-            <form method="post" action="{{ base_path(request) }}/credit-cards/{{ c.id }}/delete" style="margin:0; display:inline;">
-              <button type="submit" class="cards-btn-danger" title="{{ t('common.delete') }}">✕</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </span>
+        </div>
+        {% if c.card_type == 'credit' and c.pending > 0 %}
+        <div class="cards-item-pending">
+          {{ default_currency_sym }}{{ '%.2f'|format(c.pending) }}
+          {% if c.discount_pct %}<br><span class="muted">→ {{ default_currency_sym }}{{ '%.2f'|format(c.net_pending) }}</span>{% endif %}
+        </div>
+        {% endif %}
+        <div class="cards-item-actions">
+          <button type="button" class="cards-btn-edit cards-trigger-edit"
+                  data-card='{{ c | tojson }}'
+                  data-account-id="{{ card_account_ids.get(c.id) if card_account_ids else '' }}"
+                  title="{{ t('cards.edit') }}">✎</button>
+          <form method="post" action="{{ base_path(request) }}/credit-cards/{{ c.id }}/delete" style="margin:0;">
+            <button type="submit" class="cards-btn-danger" title="{{ t('common.delete') }}">✕</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
     {% else %}
     <p style="color:var(--muted); font-size:.82rem; margin-bottom:1rem;">{{ t('cards.empty') }}</p>
     {% endif %}
@@ -142,7 +152,7 @@
           <option value="credit">{{ t('cards.type.credit') }}</option>
         </select>
       </div>
-      <div id="card-edit-credit-options" style="display:flex; flex-direction:column; gap:.65rem;">
+      <div id="card-edit-credit-options" style="display:none; flex-direction:column; gap:.65rem;">
         <div class="cards-field">
           <label>{{ t('cards.field.settlement') }}</label>
           <select name="settlement">
@@ -178,10 +188,7 @@
 
     const typeSelect = document.getElementById('card-type-select');
     const creditOpts = document.getElementById('card-credit-options');
-    function syncCreditOpts() {
-      const isCredit = typeSelect?.value === 'credit';
-      creditOpts.style.display = isCredit ? 'flex' : 'none';
-    }
+    function syncCreditOpts() { creditOpts.style.display = typeSelect?.value === 'credit' ? 'flex' : 'none'; }
     typeSelect?.addEventListener('change', syncCreditOpts);
     syncCreditOpts();
 
@@ -189,9 +196,7 @@
     const editForm = document.getElementById('card-edit-form');
     const editTypeSelect = document.getElementById('card-edit-type-select');
     const editCreditOpts = document.getElementById('card-edit-credit-options');
-    function syncEditCreditOpts() {
-      editCreditOpts.style.display = editTypeSelect?.value === 'credit' ? 'flex' : 'none';
-    }
+    function syncEditCreditOpts() { editCreditOpts.style.display = editTypeSelect?.value === 'credit' ? 'flex' : 'none'; }
     editTypeSelect?.addEventListener('change', syncEditCreditOpts);
     document.querySelectorAll('.cards-trigger-edit').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -200,14 +205,14 @@
         editForm.action = `${document.getElementById('cards-base')?.value || ''}/credit-cards/${card.id}/edit`;
         editForm.querySelector('[name=name]').value = card.name;
         const acctSel = editForm.querySelector('[name=account_id]');
-        // Prefer the explicit account id passed on the button, else match by name
-        const btnAcct = btn.dataset.accountId;
         let matched = false;
-        [...acctSel.options].forEach(o => { if (btnAcct && o.value === String(btnAcct)) { acctSel.value = o.value; matched = true; } });
+        [...acctSel.options].forEach(o => {
+          if (btn.dataset.accountId && o.value === String(btn.dataset.accountId)) { acctSel.value = o.value; matched = true; }
+        });
         if (!matched) [...acctSel.options].forEach(o => { if (o.text === card.account) acctSel.value = o.value; });
         editTypeSelect.value = card.card_type;
-        const settleSel = editForm.querySelector('[name=settlement]');
-        settleSel.value = (card.card_type === 'credit' && card.settlement === 'salary') ? 'salary' : '';
+        editForm.querySelector('[name=settlement]').value =
+          (card.card_type === 'credit' && card.settlement === 'salary') ? 'salary' : '';
         editForm.querySelector('[name=discount_pct]').value = card.discount_pct || 0;
         editForm.querySelector('[name=match_name]').value = card.match_name || '';
         syncEditCreditOpts();
