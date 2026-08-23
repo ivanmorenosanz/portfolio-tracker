@@ -1904,6 +1904,11 @@
             const cashValues = mapValuesByLabel(labels, cashData.labels, cashData.values);
             const typeCostSeries = [fundCosts, stockCosts, etfCosts];
             const hasTypeCosts = typeCostSeries.some(arr => arr.some(v => v !== null && v !== undefined));
+            // Forward-fill cash too: at labels where the cash snapshot is missing,
+            // using 0 would make the fallback (totalCost - cash) spike to the
+            // full portfolio cost. Carrying the last known cash forward keeps
+            // the invested line continuous.
+            const cashFilled = forwardFill(cashValues);
             const investedValues = labels.map((_, idx) => {
               if (hasTypeCosts) {
                 const available = typeCostSeries
@@ -1913,8 +1918,9 @@
               }
               const totalCost = allCosts[idx];
               if (totalCost === null || totalCost === undefined || !Number.isFinite(Number(totalCost))) return null;
-              const cash = cashValues[idx];
-              const cashValue = (cash !== null && cash !== undefined && Number.isFinite(Number(cash))) ? Number(cash) : 0;
+              const cash = cashFilled[idx];
+              const cashValue = (cash !== null && cash !== undefined && Number.isFinite(Number(cash))) ? Number(cash) : null;
+              if (cashValue === null) return null;
               return Number(totalCost) - cashValue;
             });
 
