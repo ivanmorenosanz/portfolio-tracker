@@ -167,7 +167,7 @@
     html[data-device="mobile"] .filter-blocks { width:100%; }
     </style>
 </head>
-<body>
+<body class="anim-enter">
 <div class="shell">
 
   <header class="header">
@@ -1872,6 +1872,8 @@
       }
 
       async function loadTrend(period, mode) {
+        const trendWrapEl = document.getElementById('trend-wrap');
+        trendWrapEl && trendWrapEl.classList.add('chart-loading');
         try {
           const st = getComputedStyle(document.documentElement);
           const successClr  = st.getPropertyValue('--success').trim();
@@ -2007,6 +2009,8 @@
             noDataEl.style.display = 'flex';
             noDataEl.textContent = t('dash.trend.error');
           }
+        } finally {
+          trendWrapEl && trendWrapEl.classList.remove('chart-loading');
         }
       }
 

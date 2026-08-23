@@ -186,9 +186,15 @@
     html[data-device="mobile"] .week-grid { grid-template-columns:repeat(7,minmax(84px,1fr)); overflow-x:auto; }
     html[data-device="mobile"] .day-body, html[data-device="mobile"] .amt { font-size:.6rem; }
     html[data-device="mobile"] .actions { width:100%; }
-    </style>
+    
+    /* v2 motion polish */
+    .cal-cell { transition: transform var(--dur-fast,.14s) var(--ease-out,ease), border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+    .cal-cell:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--border) 40%, var(--primary) 60%); }
+    @keyframes cell-pop { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:none; } }
+    .cal-grid > * { animation: cell-pop var(--dur-slow,.38s) var(--ease-out,ease) backwards; }
+</style>
 </head>
-<body>
+<body class="anim-enter">
   <div class="shell">
     <header class="header">
       <div>

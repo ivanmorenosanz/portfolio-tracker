@@ -68,7 +68,12 @@
       .auth-shell { grid-template-columns:1fr; }
       .hero { min-height:auto; }
     }
-  </style>
+  
+  /* v2 motion polish */
+  @keyframes login-rise { from { opacity:0; transform:translateY(14px) scale(.99); } to { opacity:1; transform:none; } }
+  .login-card, .auth-wrap, main > div { animation: login-rise var(--dur-slow,.38s) var(--ease-out,ease); }
+  input { transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+</style>
 </head>
 <body>
 

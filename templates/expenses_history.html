@@ -193,9 +193,19 @@
     html[data-device="mobile"] .month-filter { width:100%; margin-left:0; }
     html[data-device="mobile"] .month-filter select,
     html[data-device="mobile"] .month-filter input { width:100%; }
-    </style>
+    
+    /* v2 motion polish */
+    @keyframes row-enter { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+    tbody tr { animation: row-enter var(--dur-slow, .38s) var(--ease-out, ease) backwards; }
+    tbody tr:nth-child(1) { animation-delay:.03s; } tbody tr:nth-child(2) { animation-delay:.05s; }
+    tbody tr:nth-child(3) { animation-delay:.07s; } tbody tr:nth-child(4) { animation-delay:.09s; }
+    tbody tr:nth-child(5) { animation-delay:.11s; } tbody tr:nth-child(6) { animation-delay:.13s; }
+    tbody tr:nth-child(n+7) { animation-delay:.15s; }
+    .summary-card { transition: transform var(--dur-med,.22s) var(--ease-out,ease), box-shadow var(--dur-med,.22s) ease; }
+    .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift, 0 14px 34px rgba(0,0,0,.18)); }
+</style>
 </head>
-<body>
+<body class="anim-enter">
   <div class="shell">
     <header class="header">
       <div>

@@ -120,9 +120,14 @@
     html[data-device="mobile"] .cost-grid { grid-template-columns:1fr; }
     html[data-device="mobile"] .modal-form-grid, html[data-device="mobile"] .recommendation-metrics { grid-template-columns:1fr; }
     html[data-device="mobile"] .actions { justify-content:flex-start; width:100%; }
-    </style>
+    
+    /* v2 motion polish */
+    .card, .summary-card { transition: transform var(--dur-med,.22s) var(--ease-out,ease), box-shadow var(--dur-med,.22s) ease; }
+    .card:hover { box-shadow: var(--shadow-lift, 0 14px 34px rgba(0,0,0,.18)); }
+    input, select { transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
+</style>
 </head>
-<body>
+<body class="anim-enter">
   <div class="shell">
     <header class="header">
       <div class="header-copy">
