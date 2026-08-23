@@ -165,6 +165,8 @@ class ExpenseRecord(Base):
     attachment_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     attachment_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    # Cobee card charges start unsettled (0); settled when deducted from salary.
+    settled: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
 
 class IncomeSchedule(Base):

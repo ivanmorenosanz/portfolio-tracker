@@ -509,6 +509,46 @@ def _adjust_cash(
     return account_currency
 
 
+def _is_cobee_charge(name: Optional[str]) -> bool:
+    """True when an expense was paid with the Cobee credit card."""
+    return "cobee" in (name or "").strip().casefold()
+
+
+COBEE_SALARY_FACTOR = 0.81  # charge minus 19% tax benefit when settled from salary
+
+
+def _settle_cobee_from_salary(
+    db: Session,
+    *,
+    user_id: int,
+    salary_account_id: int,
+) -> tuple[float, int]:
+    """Deduct pending Cobee charges from a freshly recorded salary.
+
+    Each pending charge settles at 81% of its amount (100 € charge -> 81 €
+    deducted from the income, thanks to the card's 19% tax benefit).
+    Returns (total deducted, number of charges settled).
+    """
+    pending = (
+        db.query(ExpenseRecord)
+        .filter(
+            ExpenseRecord.user_id == user_id,
+            ExpenseRecord.settled == 0,
+        )
+        .all()
+    )
+    if not pending:
+        return 0.0, 0
+    total = _round_money(sum(r.amount for r in pending) * COBEE_SALARY_FACTOR)
+    for record in pending:
+        record.settled = 1
+    # Reduce the salary's cash impact by the settled total. The salary income
+    # itself was already credited in full; this pulls the cobee repayment out.
+    if total > 0:
+        _adjust_cash(db, user_id=user_id, account_id=salary_account_id, amount=-total)
+    return total, len(pending)
+
+
 def _execute_cash_flow(
     db: Session,
     *,
@@ -526,13 +566,22 @@ def _execute_cash_flow(
     category: Optional[str] = None,
     timestamp: Optional[datetime] = None,
 ) -> None:
-    """Record a cash movement: expense (sign=-1) or income (sign=+1)."""
-    account_currency = _adjust_cash(
-        db,
-        user_id=user_id,
-        account_id=account_id,
-        amount=sign * amount,
-    )
+    """Record a cash movement: expense (sign=-1) or income (sign=+1).
+
+    Cobee credit-card charges (name contains 'cobee') never touch a cash
+    account: they are recorded unsettled and later deducted from the next
+    salary income at 81% of the charge.
+    """
+    is_cobee = record_cls is ExpenseRecord and sign < 0 and _is_cobee_charge(name)
+    if is_cobee:
+        account_currency = _get_account_currency(db, account_id)
+    else:
+        account_currency = _adjust_cash(
+            db,
+            user_id=user_id,
+            account_id=account_id,
+            amount=sign * amount,
+        )
     record = record_cls(
         user_id=user_id,
         account_id=account_id,
@@ -548,7 +597,17 @@ def _execute_cash_flow(
     )
     if record_cls is ExpenseRecord:
         record.category = category or _categorize_expense(name)
+        if is_cobee:
+            record.settled = 0
     db.add(record)
+    db.flush()  # autoflush is off; make the new row visible to the queries below
+
+    # Salary income: settle any pending Cobee charges against it.
+    if record_cls is IncomeRecord and sign > 0 and _is_nomina_concept(name):
+        deducted, count = _settle_cobee_from_salary(db, user_id=user_id, salary_account_id=account_id)
+        if count:
+            extra = f" [Cobee: -{deducted:.2f} ({count} cargos)]"
+            record.notes = ((record.notes or "") + extra).strip()
 
 
 def _execute_transfer(

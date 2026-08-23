@@ -247,6 +247,12 @@ def ensure_schema():
                 conn.exec_driver_sql("ALTER TABLE expense_records ADD COLUMN attachment_name VARCHAR(255)")
             if "category" not in er_cols:
                 conn.exec_driver_sql("ALTER TABLE expense_records ADD COLUMN category VARCHAR(40)")
+            if "settled" not in er_cols:
+                # Cobee credit-card charges: settled=0 until deducted from the
+                # next salary income (at 81% of the charge, i.e. 19% saved).
+                conn.exec_driver_sql(
+                    "ALTER TABLE expense_records ADD COLUMN settled INTEGER NOT NULL DEFAULT 1"
+                )
 
         # income_schedules table
         if "income_schedules" not in tables:
