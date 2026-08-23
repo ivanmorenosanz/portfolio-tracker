@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}">
+<html lang="{{ language|default('es') }}" data-device="{{ device_of(request) }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,230 +8,15 @@
   <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="apple-touch-icon" href="static/favicon.svg">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #f4efe8;
-      --bg-accent: #efe4d6;
-      --surface: rgba(255,255,255,.84);
-      --surface-2: rgba(255,255,255,.58);
-      --surface-strong: #fffdf9;
-      --border: rgba(28, 35, 34, .10);
-      --text: #171b1a;
-      --muted: #66706b;
-      --primary: #0f6a63;
-      --primary-hover: #0b5751;
-      --accent: #c9792b;
-      --success: #2d7b53;
-      --danger: #b54848;
-      --radius: 1.15rem;
-      --radius-sm: .8rem;
-      --shadow: 0 24px 60px rgba(42, 42, 32, .08);
-      --shadow-soft: 0 8px 24px rgba(42, 42, 32, .06);
-      --space-xs: .45rem;
-      --space-sm: .75rem;
-      --space-md: 1rem;
-      --space-lg: 1.35rem;
-      color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1313;
-        --bg-accent: #16201d;
-        --surface: rgba(24, 30, 29, .84);
-        --surface-2: rgba(34, 42, 40, .72);
-        --surface-strong: #1a2120;
-        --border: rgba(255,255,255,.08);
-        --text: #eef1ed;
-        --muted: #9aa7a0;
-        --primary: #6eb7ac;
-        --primary-hover: #8cc8bf;
-        --accent: #e2a15f;
-        --success: #73bf8b;
-        --danger: #ea7b7b;
-        --shadow: 0 24px 60px rgba(0, 0, 0, .28);
-        --shadow-soft: 0 8px 24px rgba(0, 0, 0, .18);
-        color-scheme: dark;
-      }
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Satoshi','Inter',system-ui,sans-serif;
-      font-size:1rem;
-      color:var(--text);
-      line-height:1.6;
-      -webkit-font-smoothing:antialiased;
-      background:
-        radial-gradient(circle at top left, color-mix(in oklab, var(--bg-accent) 90%, white) 0, transparent 28%),
-        radial-gradient(circle at 100% 0, color-mix(in oklab, var(--primary) 10%, transparent) 0, transparent 30%),
-        linear-gradient(180deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 86%, white) 100%);
-      min-height:100vh;
-    }
-    body::before {
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background-image: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
-      background-size: 28px 28px;
-      mask-image: linear-gradient(180deg, rgba(0,0,0,.14), transparent 65%);
-    }
-    a, button, input, select { font:inherit; color:inherit; }
-
-    .shell { max-width:1460px; margin:0 auto; padding:1.1rem 1.25rem 2.25rem; }
+  <!-- Compiled by _shared/tailwind/build.sh -->
+  <link rel="stylesheet" href="static/tailwind.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="static/app.css">
+    <style>
+    /* dashboard-specific layout (shared tokens/components live in static/app.css) */
     main { display:grid; gap:var(--space-md); }
-
-    .header {
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:1rem;
-      padding:1.1rem 1.15rem;
-      margin:0 0 var(--space-md);
-      border:1px solid var(--border);
-      border-radius:calc(var(--radius) + .2rem);
-      background:linear-gradient(135deg, color-mix(in oklab, var(--surface-strong) 82%, var(--accent) 8%) 0%, var(--surface) 58%, color-mix(in oklab, var(--surface) 92%, var(--primary) 8%) 100%);
-      backdrop-filter: blur(14px);
-      box-shadow:var(--shadow);
-    }
-    .header-title { display:grid; gap:.62rem; max-width:560px; }
     .greeting { font-size:.86rem; font-weight:600; color:var(--muted); }
     .greeting strong { color:var(--text); font-weight:700; }
-    .header-kicker {
-      display:inline-flex;
-      align-items:center;
-      gap:.45rem;
-      width:max-content;
-      padding:.35rem .7rem;
-      border-radius:999px;
-      background:color-mix(in oklab, var(--surface-strong) 74%, var(--accent) 26%);
-      color:var(--text);
-      font-size:.72rem;
-      font-weight:700;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-    }
-    .header-title h1 { font-size:clamp(2rem, 3vw, 3.1rem); font-weight:700; letter-spacing:-.06em; line-height:.95; max-width:10ch; }
-    .header-title p { font-size:.94rem; color:var(--muted); max-width:56ch; }
-    .header-actions { display:flex; gap:.46rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
-    .user-chip {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:42px;
-      height:42px;
-      border-radius:50%;
-      background:color-mix(in oklab, var(--primary) 22%, var(--surface-strong));
-      border:1px solid var(--border);
-      font-size:.92rem;
-      font-weight:700;
-      color:var(--primary);
-      cursor:default;
-    }
-
-    .btn {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:.45rem;
-      padding:.64rem .92rem;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background:var(--surface-2);
-      backdrop-filter: blur(10px);
-      font-size:.88rem;
-      font-weight:600;
-      cursor:pointer;
-      transition:transform .14s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease;
-      min-height:40px;
-      white-space:nowrap;
-      text-decoration:none;
-      box-shadow:var(--shadow-soft);
-    }
-    .btn:hover { transform:translateY(-1px); background:color-mix(in oklab, var(--surface-strong) 78%, var(--primary) 22%); border-color:color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
-    .btn-primary { background:linear-gradient(135deg, var(--primary) 0%, color-mix(in oklab, var(--primary) 75%, var(--accent) 25%) 100%); color:#fff; border-color:transparent; }
-    .btn-primary:hover { background:linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%); }
-    .btn-ghost { background:transparent; box-shadow:none; }
-    .btn-ghost:hover { background:var(--surface-2); }
-    .btn-danger,
-    .btn-edit,
-    .wl-remove {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:30px;
-      border-radius:9999px;
-      border:1px solid var(--border);
-      background:color-mix(in oklab, var(--surface-strong) 65%, var(--surface-2) 35%);
-      font-size:.68rem;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.07em;
-      padding:.32rem .64rem;
-      line-height:1;
-      transition:background .12s, border-color .12s, color .12s, transform .1s;
-      box-shadow:none;
-      cursor:pointer;
-    }
-    .btn-edit {
-      color:var(--primary);
-    }
-    .btn-edit:hover {
-      border-color:var(--primary);
-      background:color-mix(in oklab, var(--primary) 16%, var(--surface-strong));
-    }
-    .btn-danger {
-      color:var(--danger);
-    }
-    .btn-danger:hover {
-      border-color:var(--danger);
-      background:color-mix(in oklab, var(--danger) 14%, var(--surface-strong));
-    }
-    .btn-danger:active,
-    .btn-edit:active,
-    .wl-remove:active { transform:translateY(1px); }
-    .btn-icon { height:42px; padding:0; border-radius:999px; gap:0; overflow:hidden; transition:padding .18s ease; }
-    .btn-icon .icon-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; flex:0 0 42px; }
-    .btn-icon .icon-label { display:inline-block; max-width:0; opacity:0; overflow:hidden; white-space:nowrap; font-size:.85rem; font-weight:600; transition:max-width .18s ease, opacity .18s ease; }
-    .btn-icon:hover { padding-right:.9rem; transition-delay:.2s; }
-    .btn-icon:focus-visible { padding-right:.9rem; }
-    .btn-icon:hover .icon-label { max-width:160px; opacity:1; transition-delay:.2s; }
-    .btn-icon:focus-visible .icon-label { max-width:160px; opacity:1; }
-
-    .card {
-      position:relative;
-      overflow:hidden;
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:1.05rem;
-      box-shadow:var(--shadow-soft);
-      backdrop-filter:blur(14px);
-    }
-    .card::before {
-      content:"";
-      position:absolute;
-      inset:0 auto auto 0;
-      width:100%;
-      height:1px;
-      background:linear-gradient(90deg, color-mix(in oklab, var(--accent) 55%, transparent), transparent 60%);
-      opacity:.55;
-    }
-    .card-clickable {
-      cursor:pointer;
-      transition:transform .14s ease, border-color .14s ease, box-shadow .14s ease;
-    }
-    .card-clickable:hover {
-      transform:translateY(-2px);
-      border-color:color-mix(in oklab, var(--border) 45%, var(--primary) 55%);
-      box-shadow:0 10px 28px color-mix(in oklab, var(--primary) 12%, transparent);
-    }
-    .card-clickable:focus-visible {
-      outline:2px solid var(--primary);
-      outline-offset:2px;
-    }
-    .card-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin-bottom:.55rem; }
 
     .kpi-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:.85rem; }
     .kpi-grid .card:nth-child(1) { grid-column:span 5; }
@@ -241,52 +26,24 @@
     .kpi-sub { font-size:.88rem; }
     .kpi-divider { width:100%; height:1px; background:var(--border); margin:.85rem 0 .75rem; }
     .kpi-row { display:flex; justify-content:space-between; align-items:flex-start; gap:.75rem; font-size:.88rem; }
-    .positive { color:var(--success); }
-    .negative { color:var(--danger); }
-    .muted { color:var(--muted); }
 
     .overview-grid { display:grid; grid-template-columns:minmax(280px, 1fr) minmax(460px, 2fr); gap:.85rem; align-items:stretch; }
     .overview-grid .card { height:100%; }
 
-    .section-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:.78rem; gap:.85rem; flex-wrap:wrap; }
-    .section-header h2 { font-size:1rem; font-weight:700; letter-spacing:-.03em; }
-    .last-refresh { font-size:.82rem; color:var(--muted); }
-
     .trend-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:.45rem; flex-wrap:wrap; }
-    .trend-segment { display:inline-flex; align-items:center; gap:.22rem; padding:.2rem; border-radius:9999px; border:1px solid var(--border); background:color-mix(in oklab, var(--surface-strong) 60%, var(--surface-2) 40%); box-shadow:var(--shadow-soft); }
-    .filter-pills { display:flex; gap:.22rem; flex-wrap:wrap; }
-    .filter-pill { padding:.3rem .68rem; border-radius:9999px; border:1px solid transparent; background:transparent; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); cursor:pointer; transition:background .12s, color .12s, border-color .12s, transform .1s; min-height:30px; }
+    .trend-segment { display:inline-flex; align-items:center; gap:.22rem; padding:.2rem; border-radius:9999px; border:1px solid var(--border); background:color-mix(in oklab, var(--surface-strong) 60%, var(--surface-2) 40%); box-shadow:var(--shadow-soft); overflow-x:auto; max-width:100%; scrollbar-width:none; }
+    .trend-segment::-webkit-scrollbar { display:none; }
+    .filter-pills { display:flex; gap:.22rem; flex-wrap:nowrap; }
+    .filter-pill { padding:.3rem .68rem; border-radius:9999px; border:1px solid transparent; background:transparent; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); cursor:pointer; transition:background .12s, color .12s, border-color .12s, transform .1s; min-height:30px; white-space:nowrap; }
     .filter-pill:hover { border-color:var(--primary); color:var(--primary); }
     .filter-pill:active { transform:translateY(1px); }
-    .filter-pill.active { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 6px 16px color-mix(in oklab, var(--primary) 35%, transparent); }
+    .filter-pill.active { background:var(--primary); color:#fff; border-color:var(--primary); }
     .filter-blocks { display:flex; gap:.55rem; align-items:flex-start; flex-wrap:wrap; }
     .positions-actions { display:flex; align-items:flex-end; justify-content:flex-end; gap:.7rem; flex-wrap:wrap; }
     .account-add-pill { display:inline-flex; align-items:center; justify-content:center; width:30px; min-width:30px; height:30px; padding:0; border:1px solid color-mix(in oklab,var(--primary) 55%,var(--border)); border-radius:50%; color:var(--primary); background:color-mix(in oklab,var(--primary) 8%,transparent); }
     .account-add-pill:hover { background:color-mix(in oklab,var(--primary) 18%,var(--surface)); }
     .filter-block { display:grid; gap:.3rem; }
     .filter-title { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.11em; color:var(--muted); padding-left:.2rem; }
-
-    .table-wrap { overflow-x:auto; border-radius:calc(var(--radius) - .2rem); }
-    table { width:100%; border-collapse:separate; border-spacing:0; font-size:.9rem; }
-    th { position:sticky; top:0; z-index:1; font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--muted); padding:.64rem .78rem; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; background:color-mix(in oklab, var(--surface) 82%, var(--bg-accent) 18%); }
-    td { padding:.7rem .78rem; border-bottom:1px solid var(--border); white-space:nowrap; }
-    tbody tr:last-child td { border-bottom:none; }
-    tbody tr { transition:transform .12s ease, background .12s ease; }
-    tbody tr:hover { background:color-mix(in oklab, var(--surface-strong) 78%, var(--primary) 22%); }
-    tfoot td { padding:.78rem .85rem; border-top:1px solid var(--border); font-size:.9rem; background:color-mix(in oklab, var(--surface) 88%, var(--bg-accent) 12%); }
-    .pill { display:inline-flex; padding:.22rem .55rem; border-radius:9999px; background:color-mix(in oklab,var(--primary) 12%,var(--surface)); color:var(--primary); font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; }
-    #positions-table tbody tr[data-position-id] { cursor:pointer; }
-    .detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:.6rem; }
-    .detail-cell { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.65rem .8rem; }
-    .detail-label { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:.15rem; }
-    .detail-value { font-weight:700; font-size:.95rem; }
-    .actions-cell { display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; }
-    th.sortable { cursor:pointer; user-select:none; }
-    th.sortable:hover { color:var(--text); }
-    th.sortable::after { content:' ↕'; opacity:.3; font-size:.65rem; }
-    th.sort-asc::after { content:' ↑'; opacity:1; color:var(--primary); }
-    th.sort-desc::after { content:' ↓'; opacity:1; color:var(--primary); }
-    th.sort-asc, th.sort-desc { color:var(--primary); }
 
     .lower-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:.85rem; margin-top:.2rem; align-items:start; }
     .dashboard-widget { cursor:grab; }
@@ -304,94 +61,11 @@
     .recurring-total { display:flex; align-items:center; justify-content:space-between; margin-top:.6rem; padding-top:.6rem; border-top:1px solid var(--border); font-size:.9rem; }
     .allocation-note { color:var(--muted); font-size:.72rem; line-height:1.35; margin:0; }
     .chart-wrap { position:relative; min-height:250px; padding:.28rem 0 0; }
-    .chart-wrap::after {
-      content:"";
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      border-radius:calc(var(--radius) - .3rem);
-      background:linear-gradient(180deg, color-mix(in oklab, var(--surface-strong) 45%, transparent), transparent 28%);
-      opacity:.55;
-    }
-    .allocation-list { display:grid; gap:.5rem; margin-top:.5rem; }
-    .allocation-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-size:.875rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); }
-    .allocation-row:last-child { border-bottom:none; padding-bottom:0; }
+    #positions-table tbody tr[data-position-id] { cursor:pointer; }
+    .actions-cell { display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; }
 
-    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:200; padding:1rem; opacity:0; pointer-events:none; transition:opacity .18s ease; }
-    .overlay.open { opacity:1; pointer-events:auto; }
-    .modal { background:var(--surface-strong); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; transform:translateY(12px) scale(.98); transition:transform .18s ease; box-shadow:0 12px 40px rgba(0,0,0,.18); }
-    .overlay.open .modal { transform:translateY(0) scale(1); }
-    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-    .modal-header h2 { font-size:1.05rem; font-weight:600; }
-
-    .modal-tabs {
-      display:inline-flex;
-      align-items:center;
-      gap:.22rem;
-      padding:.2rem;
-      border-radius:9999px;
-      border:1px solid var(--border);
-      background:color-mix(in oklab, var(--surface-strong) 60%, var(--surface-2) 40%);
-      box-shadow:var(--shadow-soft);
-      margin-bottom:1.25rem;
-      width:100%;
-    }
-    .modal-tab {
-      flex:1;
-      min-height:32px;
-      padding:.32rem .72rem;
-      border-radius:9999px;
-      border:1px solid transparent;
-      background:transparent;
-      font-size:.72rem;
-      font-weight:700;
-      letter-spacing:.07em;
-      text-transform:uppercase;
-      cursor:pointer;
-      color:var(--muted);
-      transition:background .12s, color .12s, border-color .12s, transform .1s;
-    }
-    .modal-tab:hover { border-color:var(--primary); color:var(--primary); }
-    .modal-tab:active { transform:translateY(1px); }
-    .modal-tab.active {
-      background:var(--primary);
-      color:#fff;
-      border-color:var(--primary);
-      box-shadow:0 6px 16px color-mix(in oklab, var(--primary) 35%, transparent);
-    }
-
-    .form-grid { display:grid; gap:.72rem; }
-    .field { display:grid; gap:.26rem; }
-    .field label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
-    .field .help { font-size:.77rem; color:var(--muted); }
-    input,select {
-      width:100%;
-      min-height:42px;
-      padding:.62rem 1.1rem;
-      line-height:1.35;
-      border-radius:9999px;
-      border:1px solid var(--border);
-      background:color-mix(in oklab, var(--surface-strong) 66%, var(--surface-2) 34%);
-      font-size:.9rem;
-      transition:outline .1s, border-color .1s, background .1s, box-shadow .1s;
-    }
-    input:focus,select:focus {
-      outline:none;
-      border-color:var(--primary);
-      box-shadow:0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent);
-      background:color-mix(in oklab, var(--surface-strong) 74%, var(--primary) 6%);
-    }
-    .search-row { display:flex; gap:.5rem; }
-    .search-row input { flex:1; }
-    .search-results { display:grid; gap:.3rem; margin-top:.45rem; max-height:200px; overflow-y:auto; }
-    .search-item { border:1px solid var(--border); background:var(--surface-2); padding:.62rem .78rem; border-radius:.8rem; cursor:pointer; text-align:left; font-size:.83rem; transition:border-color .1s, background .1s, transform .1s; }
-    .search-item:hover { border-color:var(--primary); background:color-mix(in oklab,var(--primary) 5%,var(--surface)); }
-    .selected-box { padding:.8rem .9rem; border-radius:.8rem; background:var(--surface-2); border:1px solid var(--border); font-size:.85rem; }
-
-    .add-account-form { display:flex; gap:.6rem; align-items:flex-end; }
-    .add-account-form .field { flex:1; }
     .goals-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:1rem; }
-    .goal-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; background:var(--surface-2); backdrop-filter: blur(10px); }
+    .goal-card { border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; background:var(--surface-2); }
     .goal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.5rem; }
     .goal-name { font-weight:700; letter-spacing:-.02em; }
     .goal-actions { display:flex; gap:.25rem; align-items:center; }
@@ -403,7 +77,7 @@
     .goal-source { font-size:.74rem; margin-top:.3rem; }
     .goal-status { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:.4rem; font-size:.74rem; }
     .goal-badge { font-weight:600; padding:.12rem .5rem; border-radius:999px; white-space:nowrap; }
-    .goal-badge.overdue { color:#fff; background:var(--danger); }
+    .goal-badge.overdue { color:var(--danger); background:color-mix(in oklab, var(--danger) 14%, transparent); }
     .goal-badge.ontrack { color:var(--primary); background:color-mix(in oklab, var(--primary) 14%, transparent); }
     .goal-badge.done { color:var(--success); background:color-mix(in oklab, var(--success) 14%, transparent); }
     .goal-suggest { margin-top:.5rem; padding:.55rem .6rem; border-radius:.6rem; font-size:.74rem; display:flex; flex-direction:column; gap:.15rem; }
@@ -421,39 +95,8 @@
     .metas-section.collapsed { padding-top:.55rem; padding-bottom:.55rem; }
     .metas-section.collapsed .section-header { margin-bottom:0 !important; }
 
-    .filter-row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
-    .filter-select { width:auto; min-width:160px; min-height:40px; padding:.35rem .75rem; font-size:.82rem; border-radius:.8rem; cursor:pointer; }
-
-    @media (max-width:1160px) {
-      .kpi-grid { grid-template-columns:1fr 1fr; }
-      .kpi-grid .card:nth-child(1), .kpi-grid .card:nth-child(2), .kpi-grid .card:nth-child(3) { grid-column:auto; }
-      .overview-grid { grid-template-columns:1fr; }
-    }
-    @media (max-width:640px) {
-      .shell { padding:.85rem .78rem 1.6rem; }
-      .header { padding:.9rem; border-radius:1.05rem; }
-      .header-title h1 { max-width:none; }
-      .header-actions { justify-content:flex-start; }
-      .kpi-grid { grid-template-columns:1fr; }
-      .kpi-value { font-size:2rem; }
-      .btn { width:100%; }
-      .btn-icon { width:42px; }
-      .search-row { flex-direction:column; }
-      .trend-toolbar { justify-content:flex-start; width:100%; }
-      .trend-segment { width:100%; justify-content:center; }
-      .filter-blocks { width:100%; }
-      .modal-tabs { width:100%; }
-      .modal-tab { font-size:.68rem; padding:.3rem .55rem; }
-      .card { padding:.95rem; }
-      th { padding:.58rem .66rem; }
-      td { padding:.62rem .66rem; }
-      .chart-wrap { min-height:220px; }
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinning { display:inline-block; animation: spin .7s linear infinite; }
-
     .watchlist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:.5rem; }
-    .watchlist-item { display:flex; align-items:center; gap:.7rem; padding:.8rem .85rem; border:1px solid var(--border); border-radius:.95rem; background:color-mix(in oklab, var(--surface-strong) 72%, var(--primary) 28%); cursor:pointer; transition:border-color .12s, transform .12s ease; }
+    .watchlist-item { display:flex; align-items:center; gap:.7rem; padding:.8rem .85rem; border:1px solid var(--border); border-radius:.95rem; background:var(--surface-2); cursor:pointer; transition:border-color .12s, transform .12s ease; }
     .watchlist-item:hover { border-color:var(--primary); transform:translateY(-1px); }
     .watchlist-item-info { flex:1; min-width:0; }
     .watchlist-item-ticker { font-weight:700; font-size:.875rem; }
@@ -487,54 +130,75 @@
     .ta-section-title { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.5rem; }
     .sr-levels { display:grid; gap:.2rem; }
     .sr-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; font-size:.82rem; padding:.3rem .6rem; border-radius:.35rem; }
-    .sr-res { color:var(--danger); background:color-mix(in oklab,var(--danger) 6%,transparent); }
-    .sr-cur { color:var(--primary); background:color-mix(in oklab,var(--primary) 6%,transparent); font-weight:600; }
-    .sr-sup { color:var(--success); background:color-mix(in oklab,var(--success) 6%,transparent); }
+    .sr-res { color:var(--danger); }
+    .sr-cur { color:var(--primary); font-weight:600; }
+    .sr-sup { color:var(--success); }
     .ta-signal-list { display:grid; gap:.3rem; }
     .ta-signal-item { display:flex; gap:.4rem; align-items:flex-start; font-size:.8rem; }
-    ::selection { background:color-mix(in oklab, var(--primary) 26%, transparent); }
-    :focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:.25rem; }
-    ::-webkit-scrollbar { width:10px; height:10px; }
-    ::-webkit-scrollbar-thumb { background:color-mix(in oklab, var(--muted) 38%, transparent); border-radius:999px; border:2px solid transparent; background-clip:content-box; }
-    ::-webkit-scrollbar-track { background:transparent; }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+
+    @media (max-width:1160px) {
+      .kpi-grid { grid-template-columns:1fr 1fr; }
+      .kpi-grid .card:nth-child(1), .kpi-grid .card:nth-child(2), .kpi-grid .card:nth-child(3) { grid-column:auto; }
+      .overview-grid { grid-template-columns:1fr; }
     }
-  </style>
+    @media (max-width:640px) {
+      .shell { padding-left:.78rem; padding-right:.78rem; }
+      .header { padding:.9rem; }
+      .header-actions { justify-content:flex-start; }
+      .kpi-grid { grid-template-columns:1fr; }
+      .kpi-value { font-size:2rem; }
+      .card { padding:.95rem; }
+      th { padding:.58rem .66rem; }
+      td { padding:.62rem .66rem; }
+      .chart-wrap { min-height:220px; }
+    }
+
+    /* server-driven device overrides (on top of responsive breakpoints) */
+    html[data-device="mobile"] .kpi-grid { grid-template-columns:1fr; }
+    html[data-device="tablet"] .kpi-grid { grid-template-columns:1fr 1fr; }
+    html[data-device="mobile"] .kpi-grid .card:nth-child(1),
+    html[data-device="mobile"] .kpi-grid .card:nth-child(2),
+    html[data-device="mobile"] .kpi-grid .card:nth-child(3) { grid-column:auto; }
+    html[data-device="mobile"] .overview-grid,
+    html[data-device="mobile"] .lower-grid,
+    html[data-device="mobile"] .allocation-grid { grid-template-columns:1fr; }
+    html[data-device="mobile"] .header-actions { justify-content:flex-start; }
+    html[data-device="mobile"] .trend-toolbar { justify-content:flex-start; width:100%; }
+    html[data-device="mobile"] .filter-blocks { width:100%; }
+    </style>
 </head>
 <body>
 <div class="shell">
 
   <header class="header">
     <div class="header-title">
-      <span class="greeting">Hola, <strong>{{ username or '' }}</strong></span>
-      <span class="header-kicker">Control de patrimonio</span>
+      <span class="greeting">{{ t('dash.greeting') }} <strong>{{ username or '' }}</strong></span>
       <h1>Portfolio Pi</h1>
-      <p>Una vista clara de posiciones, liquidez, gastos y seguimiento de mercado en un único tablero ordenado.</p>
+      <p>{{ t('dash.subtitle') }}</p>
     </div>
     <div class="header-actions">
-      <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
-      <button class="btn btn-icon" type="button" data-apps-trigger aria-label="Aplicaciones" title="Aplicaciones">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span><span class="icon-label">Apps</span>
+      <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="{{ t('profile.title') }}">{{ (username or '?')[0] | upper }}</button>
+      <button class="btn btn-icon hide-mobile" type="button" data-apps-trigger aria-label="{{ t('apps.title') }}" title="{{ t('apps.title') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span><span class="icon-label">{{ t('apps.title') }}</span>
       </button>
-      <a class="btn btn-icon" href="expenses/history" aria-label="Movimientos">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span><span class="icon-label">Movimientos</span>
+      <a class="btn btn-icon hide-mobile" href="expenses/history" aria-label="{{ t('nav.movements') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span><span class="icon-label">{{ t('nav.movements') }}</span>
       </a>
-      <a class="btn btn-icon" href="calendar" aria-label="Calendario">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">Calendario</span>
+      <a class="btn btn-icon hide-mobile" href="calendar" aria-label="{{ t('nav.calendar') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">{{ t('nav.calendar') }}</span>
       </a>
-      <a class="btn btn-icon" href="loans" aria-label="Simulador de hipoteca">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">Hipoteca</span>
+      <a class="btn btn-icon hide-mobile" href="loans" aria-label="{{ t('nav.mortgage') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">{{ t('nav.mortgage') }}</span>
       </a>
-      <button class="btn btn-icon" id="open-ticker-modal" type="button" aria-label="Bolsa">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></span><span class="icon-label">Bolsa</span>
+      <button class="btn btn-icon hide-mobile" id="open-ticker-modal" type="button" aria-label="{{ t('nav.markets') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 17 9 11 13 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg></span><span class="icon-label">{{ t('nav.markets') }}</span>
       </button>
-      <button class="btn btn-icon btn-primary" id="open-modal" type="button" aria-label="Nueva posición">
-        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></span><span class="icon-label">Nueva posición</span>
+      <button class="btn btn-icon btn-primary" id="open-modal" type="button" aria-label="{{ t('nav.new.position') }}">
+        <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></span><span class="icon-label">{{ t('nav.new.position') }}</span>
       </button>
       <form action="logout" method="post">
-        <button class="btn btn-icon btn-ghost" type="submit" aria-label="Cerrar sesión">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span><span class="icon-label">Salir</span>
+        <button class="btn btn-icon btn-ghost" type="submit" aria-label="{{ t('nav.logout') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span><span class="icon-label">{{ t('nav.logout') }}</span>
         </button>
       </form>
     </div>
@@ -547,15 +211,15 @@
 
       <!-- valor total -->
       <div class="card">
-        <div class="card-label">Valor de cartera</div>
+        <div class="card-label">{{ t('dash.kpi.value') }}</div>
         <div class="kpi-value">{{ default_currency_sym }}{{ '%.2f'|format(total_value) }}</div>
         <div class="kpi-divider"></div>
         <div class="kpi-row">
-          <span class="muted">Liquidez (efectivo)</span>
+          <span class="muted">{{ t('dash.kpi.liquidity') }}</span>
           <span>{{ default_currency_sym }}{{ '%.2f'|format(cash_value) }} <span class="muted" style="font-size:.78rem">· {{ '%.1f'|format(cash_pct) }}%</span></span>
         </div>
         <div class="kpi-row" style="margin-top:.35rem">
-          <span class="muted">P/L</span>
+          <span class="muted">{{ t('dash.kpi.pl') }}</span>
           <span class="{{ 'positive' if profit_loss >= 0 else 'negative' }}">
             {{ '+' if profit_loss >= 0 else '' }}{{ default_currency_sym }}{{ '%.2f'|format(profit_loss) }}
           </span>
@@ -564,7 +228,7 @@
 
       <!-- rentabilidad -->
       <div class="card">
-        <div class="card-label">Rentabilidad</div>
+        <div class="card-label">{{ t('dash.kpi.return') }}</div>
         <div class="kpi-value {{ 'positive' if profit_loss >= 0 else 'negative' }}">
           {{ '+' if profit_loss_pct >= 0 else '' }}{{ '%.2f'|format(profit_loss_pct) }}%
         </div>
@@ -572,26 +236,22 @@
         {% set top = holdings | sort(attribute='pnl', reverse=true) | first if holdings else None %}
         {% if top %}
         <div class="kpi-row">
-          <span class="muted">Mejor posición</span>
+          <span class="muted">{{ t('dash.kpi.best') }}</span>
           <span class="{{ 'positive' if top.pnl >= 0 else 'negative' }}">{{ top.asset }} ({{ '+' if top.pnl >= 0 else '' }}{{ '%.2f'|format(top.pnl) }})</span>
         </div>
         {% else %}
-        <div class="kpi-sub muted">Sin posiciones todavía</div>
+        <div class="kpi-sub muted">{{ t('dash.kpi.no.positions') }}</div>
         {% endif %}
       </div>
 
       <!-- interés compuesto -->
-      <div class="card card-clickable" id="open-compound-interest-modal" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="compound-interest-overlay" aria-label="Abrir calculadora de interés compuesto">
-        <div class="card-label">Interés compuesto</div>
-        <div class="kpi-value positive">{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }}</div>
+      <div class="card card-clickable" id="open-compound-interest-modal" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="compound-interest-overlay" aria-label="{{ t('dash.compound.open') }}">
+        <div class="card-label">{{ t('dash.kpi.compound') }}</div>
+        <div class="kpi-value">{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }}</div>
         <div class="kpi-divider"></div>
         <div class="kpi-row">
-          <span class="muted">Capital invertido</span>
-          <span class="positive">{{ default_currency_sym }}{{ '%.2f'|format(invested_value) }}</span>
-        </div>
-        <div class="kpi-row" style="margin-top:.35rem">
-          <span class="muted">Proyección</span>
-          <span class="muted" style="font-size:.78rem">Fondos · acciones · ETF</span>
+          <span class="muted">{{ t('dash.kpi.projection') }}</span>
+          <span class="muted" style="font-size:.78rem">{{ t('dash.kpi.projection.sub') }}</span>
         </div>
       </div>
 
@@ -600,11 +260,11 @@
     <!-- metas -->
     <div class="card metas-section collapsed" id="metas-card" style="margin-bottom:1rem">
       <div class="section-header" style="margin-bottom:.75rem">
-        <div class="metas-title" id="metas-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="metas-body" title="Mostrar/ocultar metas">
-          <h2>Metas <span class="metas-chevron">▸</span></h2>
-          <p class="last-refresh">Objetivos de ahorro con seguimiento visual del progreso{% if monthly_savings %} · Ahorro recurrente disponible: {{ default_currency_sym }}{{ '%.2f'|format(monthly_savings.get(default_currency, 0.0)) }}/mes{% endif %}</p>
+        <div class="metas-title" id="metas-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="metas-body" title="{{ t('dash.goals.toggle') }}">
+          <h2>{{ t('dash.goals') }} <span class="metas-chevron">▸</span></h2>
+          <p class="last-refresh">{{ t('dash.goals.subtitle') }}{% if monthly_savings %} · {{ t('dash.goals.recurring') }} {{ default_currency_sym }}{{ '%.2f'|format(monthly_savings.get(default_currency, 0.0)) }}{{ t('dash.goals.per.month') }}{% endif %}</p>
         </div>
-        <button class="btn btn-primary" id="open-goal-modal" type="button">+ Añadir meta</button>
+        <button class="btn btn-primary" id="open-goal-modal" type="button">{{ t('dash.goals.add') }}</button>
       </div>
       <div id="metas-body" class="metas-body">
       {% if goals %}
@@ -622,37 +282,37 @@
                 data-goal-account-id="{{ g.account_id or '' }}"
                 data-goal-manual="{{ g.manual_amount or '' }}"
                 data-goal-date="{{ g.target_date or '' }}"
-                title="Editar meta">✎</button>
+                title="{{ t('dash.goals.edit') }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
               <form action="goals/{{ g.id }}/delete" method="post" style="margin:0">
-                <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar la meta «{{ g.name }}»?')" title="Eliminar meta">🗑</button>
+                <button class="btn btn-danger" type="submit" onclick="return confirm({{ t('dash.goals.delete.confirm', name=g.name) | tojson }})" title="{{ t('dash.goals.delete') }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
               </form>
             </div>
           </div>
-          <div class="goal-bar" role="progressbar" aria-valuenow="{{ g.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de {{ g.name }}">
+          <div class="goal-bar" role="progressbar" aria-valuenow="{{ g.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ t('dash.goals.progress', name=g.name) }}">
             <div class="goal-bar-fill" style="width:{{ g.pct }}%"></div>
           </div>
           <div class="goal-meta">
             <span>{{ g.currency_sym }}{{ '%.2f'|format(g.current) }} / {{ g.currency_sym }}{{ '%.2f'|format(g.target_amount) }}</span>
             <span class="pct {{ 'positive' if g.reached else '' }}">{{ '%.1f'|format(g.pct) }}%</span>
           </div>
-          <div class="goal-source muted">{% if g.account_name %}Vinculada a {{ g.account_name }}{% else %}Progreso manual{% endif %}</div>
+          <div class="goal-source muted">{% if g.account_name %}{{ t('dash.goals.linked', account=g.account_name) }}{% else %}{{ t('dash.goals.manual') }}{% endif %}</div>
           {% if g.target_date %}
           <div class="goal-status">
             <span class="goal-badge {{ 'overdue' if g.status == 'overdue' else ('ontrack' if g.status == 'on_track' else 'done') }}">
-              {%- if g.status == 'overdue' %}Atrasada · hace {{ -g.days_left }} día{{ 's' if g.days_left < -1 }}{% elif g.status == 'on_track' %}En plazo · quedan {{ g.days_left }} día{{ 's' if g.days_left != 1 }}{% else %}Completada{% endif -%}
+              {%- if g.status == 'overdue' %}{{ t('dash.goals.overdue', days=-g.days_left, s=('s' if g.days_left < -1 else '')) }}{% elif g.status == 'on_track' %}{{ t('dash.goals.ontrack', days=g.days_left, s=('s' if g.days_left != 1 else '')) }}{% else %}{{ t('dash.goals.done') }}{% endif -%}
             </span>
-            <span class="muted">Objetivo: {{ g.target_date_display }}</span>
+            <span class="muted">{{ t('dash.goals.target') }} {{ g.target_date_display }}</span>
           </div>
           {% endif %}
           {% if g.suggestion %}
           <div class="goal-suggest {% if g.suggestion.kind == 'undated' or g.suggestion.covered %}covered{% else %}short{% endif %}">
             {% if g.suggestion.kind == 'date' %}
-            <span class="suggest-label">Aportación sugerida</span>
-            <span class="suggest-amount">{{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.required) }}/mes <span class="muted" style="font-weight:400">para llegar en {{ g.suggestion.months_left }} mes{{ 'es' if g.suggestion.months_left != 1 }}</span></span>
-            <span class="suggest-note">{% if g.suggestion.covered %}✅ Cubierta con tu ahorro recurrente ({{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.available) }}/mes){% else %}⚠️ Tu ahorro recurrente cubre {{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.available) }}/mes · faltan {{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.required - g.suggestion.available) }}/mes{% endif %}</span>
+            <span class="suggest-label">{{ t('dash.goals.suggestion') }}</span>
+            <span class="suggest-amount">{{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.required) }}/mes <span class="muted" style="font-weight:400">{{ t('dash.goals.suggestion.months', months=g.suggestion.months_left, es=('es' if g.suggestion.months_left != 1 else '')) }}</span></span>
+            <span class="suggest-note">{% if g.suggestion.covered %}{{ t('dash.goals.covered', amount=g.currency_sym ~ ('%.2f'|format(g.suggestion.available))) }}{% else %}{{ t('dash.goals.short', available=g.currency_sym ~ ('%.2f'|format(g.suggestion.available)), missing=g.currency_sym ~ ('%.2f'|format(g.suggestion.required - g.suggestion.available))) }}{% endif %}</span>
             {% else %}
-            <span class="suggest-label">Con tu ahorro recurrente</span>
-            <span class="suggest-amount">{{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.available) }}/mes <span class="muted" style="font-weight:400">→ alcanzarías la meta en ~{{ g.suggestion.months }} mes{{ 'es' if g.suggestion.months != 1 }}</span></span>
+            <span class="suggest-label">{{ t('dash.goals.undated.label') }}</span>
+            <span class="suggest-amount">{{ g.currency_sym }}{{ '%.2f'|format(g.suggestion.available) }}/mes <span class="muted" style="font-weight:400">{{ t('dash.goals.undated.months', months=g.suggestion.months, es=('es' if g.suggestion.months != 1 else '')) }}</span></span>
             {% endif %}
           </div>
           {% endif %}
@@ -660,7 +320,7 @@
         {% endfor %}
       </div>
       {% else %}
-      <p class="muted" style="font-size:.85rem;padding:.25rem 0">Todavía no hay metas. Añade un objetivo (por ejemplo, un fondo de emergencia) y haz seguimiento de su progreso.</p>
+      <p class="muted" style="font-size:.85rem;padding:.25rem 0">{{ t('dash.goals.empty') }}</p>
       {% endif %}
       </div>
     </div>
@@ -669,43 +329,43 @@
       <div class="card" id="watchlist-card" style="margin-bottom:.75rem">
         <div class="section-header" style="margin-bottom:.75rem">
           <div>
-            <h2>Favoritos</h2>
-            <p class="last-refresh">Seguimiento rápido de tus instrumentos observados</p>
+            <h2>{{ t('dash.watchlist') }}</h2>
+            <p class="last-refresh">{{ t('dash.watchlist.subtitle') }}</p>
           </div>
-          <button class="btn btn-ghost btn-icon" id="refresh-watchlist-btn" type="button" title="Actualizar precios de favoritos" style="font-size:.9rem">↻</button>
+          <button class="btn btn-ghost btn-icon" id="refresh-watchlist-btn" type="button" title="{{ t('dash.watchlist.refresh') }}" style="font-size:.9rem;width:34px;height:34px;min-height:34px"><span class="icon-glyph" style="width:34px;height:34px;flex-basis:34px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></span></button>
         </div>
         <div id="watchlist-container" class="watchlist-grid">
-          <p class="muted" style="font-size:.85rem;padding:.25rem 0">Cargando…</p>
+          <p class="muted" style="font-size:.85rem;padding:.25rem 0">{{ t('dash.loading') }}</p>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:.75rem">
         <div class="section-header" style="margin-bottom:.75rem">
           <div>
-            <h2>Evolución de la cartera</h2>
-            <p class="last-refresh" id="trend-last-refresh">Precios actualizados: {{ last_refresh.strftime('%d %b · %H:%M') if last_refresh else '—' }}</p>
+            <h2>{{ t('dash.trend.title') }}</h2>
+            <p class="last-refresh" id="trend-last-refresh">{{ t('dash.trend.refresh') }} {{ last_refresh.strftime('%d %b · %H:%M') if last_refresh else '—' }}</p>
           </div>
           <div class="trend-toolbar">
             <div class="trend-segment filter-pills" id="trend-mode-filters">
-              <button class="filter-pill active" data-mode="all">Cartera</button>
-              <button class="filter-pill" data-mode="mix">F + A + ETF</button>
-              <button class="filter-pill" data-mode="cash">Efectivo</button>
+              <button class="filter-pill active" data-mode="all">{{ t('dash.trend.mode.all') }}</button>
+              <button class="filter-pill" data-mode="mix">{{ t('dash.trend.mode.mix') }}</button>
+              <button class="filter-pill" data-mode="cash">{{ t('dash.trend.mode.cash') }}</button>
             </div>
             <div class="trend-segment filter-pills" id="trend-filters">
-              <button class="filter-pill" data-period="1d">1D</button>
-              <button class="filter-pill active" data-period="1w">1S</button>
-              <button class="filter-pill" data-period="1m">1M</button>
-              <button class="filter-pill" data-period="3m">3M</button>
-              <button class="filter-pill" data-period="6m">6M</button>
-              <button class="filter-pill" data-period="ytd">YTD</button>
-              <button class="filter-pill" data-period="1y">1A</button>
-              <button class="filter-pill" data-period="all">Todo</button>
+              <button class="filter-pill" data-period="1d">{{ t('dash.trend.1d') }}</button>
+              <button class="filter-pill active" data-period="1w">{{ t('dash.trend.1w') }}</button>
+              <button class="filter-pill" data-period="1m">{{ t('dash.trend.1m') }}</button>
+              <button class="filter-pill" data-period="3m">{{ t('dash.trend.3m') }}</button>
+              <button class="filter-pill" data-period="6m">{{ t('dash.trend.6m') }}</button>
+              <button class="filter-pill" data-period="ytd">{{ t('dash.trend.ytd') }}</button>
+              <button class="filter-pill" data-period="1y">{{ t('dash.trend.1y') }}</button>
+              <button class="filter-pill" data-period="all">{{ t('dash.trend.all') }}</button>
             </div>
           </div>
         </div>
         <div class="chart-wrap" style="min-height:240px" id="trend-wrap">
           <canvas id="trendChart"></canvas>
-          <p id="trend-no-data" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:var(--muted)">Sin datos todavía — los puntos se guardan tras cada actualización de precios.</p>
+          <p id="trend-no-data" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:.85rem;color:var(--muted)">{{ t('dash.trend.no.data') }}</p>
         </div>
       </div>
     </div>
@@ -713,27 +373,27 @@
     <!-- positions table -->
     <div class="card">
       <div class="section-header">
-        <h2>Posiciones</h2>
+        <h2>{{ t('dash.positions') }}</h2>
         <div class="positions-actions">
           <div class="filter-blocks">
           <div class="filter-block">
-            <span class="filter-title">Tipo</span>
+            <span class="filter-title">{{ t('dash.filter.type') }}</span>
             <div class="trend-segment filter-pills" id="positions-type-filters">
-              <button class="filter-pill active" data-type="all" type="button">Todos</button>
-              <button class="filter-pill" data-type="stock" type="button">Acciones</button>
-              <button class="filter-pill" data-type="etf" type="button">ETF</button>
-              <button class="filter-pill" data-type="fund" type="button">Fondos</button>
-              <button class="filter-pill" data-type="cash" type="button">Efectivo</button>
+              <button class="filter-pill active" data-type="all" type="button">{{ t('dash.filter.all') }}</button>
+              <button class="filter-pill" data-type="stock" type="button">{{ t('dash.filter.stock') }}</button>
+              <button class="filter-pill" data-type="etf" type="button">{{ t('dash.filter.etf') }}</button>
+              <button class="filter-pill" data-type="fund" type="button">{{ t('dash.filter.fund') }}</button>
+              <button class="filter-pill" data-type="cash" type="button">{{ t('dash.filter.cash') }}</button>
             </div>
           </div>
           <div class="filter-block">
-            <span class="filter-title">Cuenta</span>
+            <span class="filter-title">{{ t('dash.filter.account') }}</span>
             <div class="trend-segment filter-pills" id="positions-account-filters">
-              <button class="filter-pill active" data-account="all" type="button">Todas</button>
+              <button class="filter-pill active" data-account="all" type="button">{{ t('dash.filter.all.accounts') }}</button>
               {% for acc in accounts %}
               <button class="filter-pill" data-account="{{ acc.name }}" type="button">{{ acc.name }}</button>
               {% endfor %}
-              <button class="filter-pill account-add-pill" id="open-account-modal" type="button" aria-label="Añadir cuenta" title="Añadir cuenta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+              <button class="filter-pill account-add-pill" id="open-account-modal" type="button" aria-label="{{ t('dash.add.account') }}" title="{{ t('dash.add.account') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
             </div>
           </div>
         </div>
@@ -743,31 +403,31 @@
         <table id="positions-table">
           <thead>
             <tr>
-              <th class="sortable" data-col="0">Cuenta</th>
-              <th class="sortable" data-col="1">Activo</th>
-              <th class="sortable" data-col="2">Ticker</th>
-              <th class="sortable" data-col="3">Tipo</th>
-              <th class="sortable" data-col="4">Cantidad</th>
-              <th class="sortable" data-col="5">Coste medio</th>
-              <th class="sortable" data-col="6">Precio actual</th>
-              <th class="sortable" data-col="7">Valor</th>
-              <th class="sortable" data-col="8">P/L <span id="pl-toggle-hint" title="Clic en cualquier valor P/L para cambiar €/%" style="cursor:pointer;opacity:.45;font-weight:normal;font-size:.65rem">€</span></th>
+              <th class="sortable" data-col="0">{{ t('dash.col.account') }}</th>
+              <th class="sortable" data-col="1">{{ t('dash.col.asset') }}</th>
+              <th class="sortable" data-col="2">{{ t('dash.col.ticker') }}</th>
+              <th class="sortable" data-col="3">{{ t('dash.col.type') }}</th>
+              <th class="sortable" data-col="4">{{ t('dash.col.qty') }}</th>
+              <th class="sortable" data-col="5">{{ t('dash.col.avg.cost') }}</th>
+              <th class="sortable" data-col="6">{{ t('dash.col.current.price') }}</th>
+              <th class="sortable" data-col="7">{{ t('dash.col.value') }}</th>
+              <th class="sortable" data-col="8">{{ t('dash.col.pl') }} <span id="pl-toggle-hint" title="{{ t('dash.col.pl.hint') }}" style="cursor:pointer;opacity:.45;font-weight:normal;font-size:.65rem">€</span></th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {% for row in holdings %}
             {% set asset_display = (row.notes|trim) if row.notes else row.asset %}
-            <tr {% if row.asset_type != 'cash' %}data-position-id="{{ row.id }}" title="Ver detalle"{% endif %}>
+            <tr {% if row.asset_type != 'cash' %}data-position-id="{{ row.id }}" title="{{ t('dash.view.detail') }}"{% endif %}>
               <td data-sort="{{ row.account }}">{{ row.account }}</td>
               <td data-sort="{{ asset_display }}">{{ asset_display }}</td>
-              <td data-sort="{{ row.ticker }}">{% if row.ticker and row.ticker != '-' %}<a href="{{ row.ticker_url or ('https://finance.yahoo.com/quote/' ~ row.ticker) }}" target="_blank" rel="noopener noreferrer"{% if row.ticker_source %} title="Datos de {{ row.ticker_source }}"{% endif %} style="color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--border)">{{ row.ticker }}</a>{% else %}{{ row.ticker }}{% endif %}</td>
+              <td data-sort="{{ row.ticker }}">{% if row.ticker and row.ticker != '-' %}<a href="{{ row.ticker_url or ('https://finance.yahoo.com/quote/' ~ row.ticker) }}" target="_blank" rel="noopener noreferrer"{% if row.ticker_source %} title="{{ t('dash.data.from', source=row.ticker_source) }}"{% endif %} style="color:inherit;text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--border)">{{ row.ticker }}</a>{% else %}{{ row.ticker }}{% endif %}</td>
               <td data-sort="{{ row.asset_type }}"><span class="pill">{{ row.asset_type }}</span></td>
               <td data-sort="{{ row.quantity }}">{{ row.quantity|trim_zeros }}</td>
               <td data-sort="{{ row.average_cost }}">{% if row.asset_type == 'cash' %}<span class="muted">—</span>{% else %}{{ row.currency_sym }}{{ row.average_cost|trim_zeros }}{% endif %}</td>
               <td data-sort="{{ row.current_price }}">{% if row.asset_type == 'cash' %}<span class="muted">—</span>{% else %}{{ row.currency_sym }}{{ row.current_price|trim_zeros }}{% endif %}</td>
               <td data-sort="{{ row.market_value }}">{{ row.currency_sym }}{{ '%.2f'|format(row.market_value) }}</td>
-              <td class="pnl-cell" data-sort="{{ row.pnl }}" data-pnl="{{ '%.4f'|format(row.pnl) }}" data-pnl-pct="{{ '%.4f'|format(row.pnl_pct) }}" data-currency="{{ row.currency_sym }}" data-is-cash="{{ 'true' if row.asset_type == 'cash' else 'false' }}">{% if row.asset_type == 'cash' %}<span class="muted">—</span>{% else %}<span class="{{ 'positive' if row.pnl >= 0 else 'negative' }}" style="cursor:pointer" title="Clic para cambiar €/%">{{ row.currency_sym }}{{ '%.2f'|format(row.pnl) }}</span>{% endif %}</td>
+              <td class="pnl-cell" data-sort="{{ row.pnl }}" data-pnl="{{ '%.4f'|format(row.pnl) }}" data-pnl-pct="{{ '%.4f'|format(row.pnl_pct) }}" data-currency="{{ row.currency_sym }}" data-is-cash="{{ 'true' if row.asset_type == 'cash' else 'false' }}">{% if row.asset_type == 'cash' %}<span class="muted">—</span>{% else %}<span class="{{ 'positive' if row.pnl >= 0 else 'negative' }}" style="cursor:pointer" title="{{ t('dash.col.pl.toggle') }}">{{ row.currency_sym }}{{ '%.2f'|format(row.pnl) }}</span>{% endif %}</td>
               <td>
                 <button class="btn btn-edit" type="button"
                   data-edit-id="{{ row.id }}"
@@ -781,13 +441,13 @@
                   data-edit-auto-amount="{{ row.auto_amount if row.auto_amount is not none else '' }}"
                   data-edit-auto-day="{{ row.auto_day if row.auto_day is not none else '' }}"
                   data-edit-market-value="{{ '%.2f'|format(row.market_value) }}"
-                  data-edit-currency="{{ row.currency_sym }}">Editar</button>
+                  data-edit-currency="{{ row.currency_sym }}">{{ t('dash.edit') }}</button>
               </td>
             </tr>
             {% else %}
             <tr>
               <td colspan="10" class="muted" style="padding:2rem .8rem;text-align:center">
-                Aún no hay posiciones. Usa <strong>+ Nueva posición</strong> para empezar.
+                {{ t('dash.positions.empty') }} <strong>{{ t('dash.positions.empty.tail') }}</strong> {{ t('dash.positions.empty.end') }}
               </td>
             </tr>
             {% endfor %}
@@ -799,52 +459,52 @@
     <!-- distribución de inversiones -->
     <div class="allocation-grid" data-dashboard-widget-container="allocation">
       <div class="card allocation-card dashboard-widget" draggable="true" data-dashboard-widget="fund-distribution">
-        <div class="card-label">Distribución de fondos</div>
-        <p class="allocation-note">Peso de cada fondo, ETF o acción dentro del capital invertido.</p>
-        <div class="chart-wrap" style="min-height:280px"><canvas id="fundDistributionChart"></canvas><p id="fundDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">No hay inversiones para distribuir.</p></div>
+        <div class="card-label">{{ t('dash.alloc.funds') }}</div>
+        <p class="allocation-note">{{ t('dash.alloc.funds.note') }}</p>
+        <div class="chart-wrap" style="min-height:280px"><canvas id="fundDistributionChart"></canvas><p id="fundDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">{{ t('dash.alloc.funds.empty') }}</p></div>
       </div>
       <div class="card allocation-card dashboard-widget" draggable="true" data-dashboard-widget="geography-distribution">
-        <div class="card-label">Distribución geográfica</div>
-        <p class="allocation-note">Estimación basada en el nombre del instrumento y su divisa.</p>
-        <div class="chart-wrap" style="min-height:280px"><canvas id="geographyDistributionChart"></canvas><p id="geographyDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">No hay datos geográficos.</p></div>
+        <div class="card-label">{{ t('dash.alloc.geo') }}</div>
+        <p class="allocation-note">{{ t('dash.alloc.geo.note') }}</p>
+        <div class="chart-wrap" style="min-height:280px"><canvas id="geographyDistributionChart"></canvas><p id="geographyDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">{{ t('dash.alloc.geo.empty') }}</p></div>
       </div>
       <div class="card allocation-card dashboard-widget" draggable="true" data-dashboard-widget="sector-distribution">
-        <div class="card-label">Distribución sectorial</div>
-        <p class="allocation-note">Estimación por nombre/ticker; los fondos amplios aparecen como diversificados.</p>
-        <div class="chart-wrap" style="min-height:280px"><canvas id="sectorDistributionChart"></canvas><p id="sectorDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">No hay datos sectoriales.</p></div>
+        <div class="card-label">{{ t('dash.alloc.sector') }}</div>
+        <p class="allocation-note">{{ t('dash.alloc.sector.note') }}</p>
+        <div class="chart-wrap" style="min-height:280px"><canvas id="sectorDistributionChart"></canvas><p id="sectorDistributionEmpty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">{{ t('dash.alloc.sector.empty') }}</p></div>
       </div>
     </div>
 
     <!-- charts + allocation + recurring contributions -->
     <div class="lower-grid" data-dashboard-widget-container="lower">
       <div class="card dashboard-widget" draggable="true" data-dashboard-widget="account-distribution">
-        <div class="card-label">Por cuenta</div>
+        <div class="card-label">{{ t('dash.alloc.by.account') }}</div>
         <div class="chart-wrap"><canvas id="accountChart"></canvas></div>
       </div>
       <div class="card dashboard-widget" draggable="true" data-dashboard-widget="asset-type-distribution">
-        <div class="card-label">Por tipo de activo</div>
+        <div class="card-label">{{ t('dash.alloc.by.type') }}</div>
         <div class="chart-wrap"><canvas id="typeChart"></canvas></div>
       </div>
       <div class="card dashboard-widget" draggable="true" data-dashboard-widget="recurring-contributions">
-        <div class="card-label">Aportaciones recurrentes</div>
+        <div class="card-label">{{ t('dash.recurring') }}</div>
         {% if recurring_contributions %}
         <ul class="recurring-list">
           {% for row in recurring_contributions %}
           <li class="recurring-item">
             <div class="recurring-info">
               <span class="recurring-name">{{ row.asset }}</span>
-              <span class="recurring-meta muted">{{ row.account }} · día {{ row.day }}{% if row.last_executed_period %} · {{ row.last_executed_period }}{% endif %}</span>
+              <span class="recurring-meta muted">{{ row.account }} · {{ t('dash.recurring.day', day=row.day) }}{% if row.last_executed_period %} · {{ row.last_executed_period }}{% endif %}</span>
             </div>
             <span class="recurring-amount">{{ row.currency_sym }}{{ '%.2f'|format(row.amount) }}</span>
           </li>
           {% endfor %}
         </ul>
         <div class="recurring-total">
-          <span class="muted">Total mensual</span>
+          <span class="muted">{{ t('dash.recurring.total') }}</span>
           <strong>{{ recurring_contributions[0].currency_sym }}{{ '%.2f'|format(recurring_contributions | sum(attribute='amount')) }}</strong>
         </div>
         {% else %}
-        <p class="muted" style="font-size:.84rem">No hay aportaciones recurrentes activas. Edita una posición para activarlas.</p>
+        <p class="muted" style="font-size:.84rem">{{ t('dash.recurring.empty') }}</p>
         {% endif %}
       </div>
     </div>
@@ -852,50 +512,72 @@
   </main>
 </div>
 
+<nav class="mobilenav" aria-label="{{ t('apps.title') }}">
+  <a class="mobilenav-item active" href="./" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+    <span>{{ t('nav.dashboard') }}</span>
+  </a>
+  <a class="mobilenav-item" href="expenses/history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+    <span>{{ t('nav.movements') }}</span>
+  </a>
+  <a class="mobilenav-item" href="calendar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <span>{{ t('nav.calendar') }}</span>
+  </a>
+  <a class="mobilenav-item" href="loans">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg>
+    <span>{{ t('nav.mortgage') }}</span>
+  </a>
+  <button class="mobilenav-item" type="button" data-apps-trigger>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+    <span>{{ t('apps.title') }}</span>
+  </button>
+</nav>
+
 <!-- modal: calculadora de interés compuesto -->
 <div class="overlay" id="compound-interest-overlay" role="dialog" aria-modal="true" aria-labelledby="compound-interest-modal-title">
   <div class="modal" style="max-width:1100px;width:100%">
     <div class="modal-header">
-      <h2 id="compound-interest-modal-title">Calculadora de interés compuesto</h2>
-      <button class="btn btn-icon btn-ghost" id="close-compound-interest-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="compound-interest-modal-title">{{ t('dash.compound.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-compound-interest-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <p class="muted" style="font-size:.84rem;margin-bottom:.9rem">
-      Ajusta el plazo, el tipo anual y la aportación mensual de cada fondo, acción o ETF.
-      El cálculo usa capitalización mensual y no garantiza rentabilidades futuras.
+      {{ t('dash.compound.subtitle') }}
     </p>
     <div class="field" style="max-width:260px;margin-bottom:1rem">
-      <label for="compound-years">Plazo (años)</label>
+      <label for="compound-years">{{ t('dash.compound.years') }}</label>
       <input id="compound-years" type="number" min="1" max="60" step="1" value="10">
     </div>
     <div class="detail-grid" style="margin-bottom:1rem">
-      <div class="detail-cell"><div class="detail-label">Capital inicial</div><div class="detail-value" id="compound-summary-initial">—</div></div>
-      <div class="detail-cell"><div class="detail-label">Aportaciones</div><div class="detail-value" id="compound-summary-contributions">—</div></div>
-      <div class="detail-cell"><div class="detail-label">Valor final</div><div class="detail-value positive" id="compound-summary-final">—</div></div>
-      <div class="detail-cell"><div class="detail-label">Interés generado</div><div class="detail-value positive" id="compound-summary-interest">—</div></div>
+      <div class="detail-cell"><div class="detail-label">{{ t('dash.compound.initial') }}</div><div class="detail-value" id="compound-summary-initial">—</div></div>
+      <div class="detail-cell"><div class="detail-label">{{ t('dash.compound.contributions') }}</div><div class="detail-value" id="compound-summary-contributions">—</div></div>
+      <div class="detail-cell"><div class="detail-label">{{ t('dash.compound.final') }}</div><div class="detail-value positive" id="compound-summary-final">—</div></div>
+      <div class="detail-cell"><div class="detail-label">{{ t('dash.compound.interest') }}</div><div class="detail-value positive" id="compound-summary-interest">—</div></div>
     </div>
     <div class="table-wrap">
       <table id="compound-interest-table">
         <thead>
-          <tr><th>Cuenta</th><th>Activo</th><th>Capital inicial</th><th>Tipo anual</th><th>Aportación mensual</th><th>Valor final</th><th>Interés generado</th></tr>
+          <tr><th>{{ t('dash.col.account') }}</th><th>{{ t('dash.col.asset') }}</th><th>{{ t('dash.compound.col.initial') }}</th><th>{{ t('dash.compound.col.rate') }}</th><th>{{ t('dash.compound.col.monthly') }}</th><th>{{ t('dash.compound.col.final') }}</th><th>{{ t('dash.compound.col.interest') }}</th></tr>
         </thead>
         <tbody>
           {% for row in holdings if row.asset_type in ['fund', 'stock', 'etf'] and row.market_value > 0 %}
           <tr data-compound-row data-currency-symbol="{{ row.currency_sym }}">
             <td>{{ row.account }}</td>
             <td>{{ row.asset }}<div class="muted" style="font-size:.72rem">{{ row.asset_type }}</div></td>
-            <td><input class="compound-principal" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.market_value) }}" aria-label="Capital inicial de {{ row.asset }}"></td>
-            <td><input class="compound-rate" type="number" min="-99.99" max="1000" step="0.01" value="5" aria-label="Tipo anual de {{ row.asset }}">%</td>
-            <td><input class="compound-monthly" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.auto_amount or 0) }}" aria-label="Aportación mensual para {{ row.asset }}"></td>
+            <td><input class="compound-principal" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.market_value) }}" aria-label="{{ t('dash.compound.initial.of', asset=row.asset) }}"></td>
+            <td><input class="compound-rate" type="number" min="-99.99" max="1000" step="0.01" value="5" aria-label="{{ t('dash.compound.rate.of', asset=row.asset) }}">%</td>
+            <td><input class="compound-monthly" type="number" min="0" step="0.01" value="{{ '%.2f'|format(row.auto_amount or 0) }}" aria-label="{{ t('dash.compound.monthly.of', asset=row.asset) }}"></td>
             <td class="compound-final positive">—</td>
             <td class="compound-interest positive">—</td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">No hay fondos, acciones o ETF con valor positivo para calcular.</td></tr>
+          <tr><td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">{{ t('dash.compound.empty') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <p class="muted" style="font-size:.72rem;margin-top:.8rem">Las sumas del resumen mezclan los importes tal como aparecen en cada posición; usa posiciones de la misma divisa para una suma total significativa.</p>
+    <p class="muted" style="font-size:.72rem;margin-top:.8rem">{{ t('dash.compound.footer') }}</p>
   </div>
 </div>
 
@@ -903,15 +585,15 @@
 <div class="overlay" id="ticker-overlay" role="dialog" aria-modal="true" aria-labelledby="ticker-modal-title">
   <div class="modal">
     <div class="modal-header">
-      <h2 id="ticker-modal-title">Consultar bolsa</h2>
-      <button class="btn btn-icon btn-ghost" id="close-ticker-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="ticker-modal-title">{{ t('dash.ticker.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-ticker-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <div class="form-grid">
       <div class="field">
-        <label for="ticker-search-input">Buscar instrumento</label>
+        <label for="ticker-search-input">{{ t('dash.ticker.search') }}</label>
         <div class="search-row">
-          <input id="ticker-search-input" type="text" placeholder="Apple, NVDA, VWCE, IE00BK5BQT80…">
-          <button class="btn" id="ticker-search-btn" type="button">Buscar</button>
+          <input id="ticker-search-input" type="text" placeholder="{{ t('dash.ticker.placeholder') }}">
+          <button class="btn" id="ticker-search-btn" type="button">{{ t('dash.ticker.search.btn') }}</button>
         </div>
         <div id="ticker-results" class="search-results"></div>
       </div>
@@ -924,16 +606,16 @@
 <div class="overlay" id="account-overlay" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
   <div class="modal" style="max-width:380px">
     <div class="modal-header">
-      <h2 id="account-modal-title">Añadir cuenta</h2>
-      <button class="btn btn-icon btn-ghost" id="close-account-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="account-modal-title">{{ t('dash.account.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-account-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form action="accounts" method="post">
       <div class="form-grid">
         <div class="field">
-          <label for="account-name">Nombre</label>
-          <input id="account-name" name="name" placeholder="Sabadell, MyInvestor, IBKR…" required>
+          <label for="account-name">{{ t('dash.account.name') }}</label>
+          <input id="account-name" name="name" placeholder="{{ t('dash.account.placeholder') }}" required>
         </div>
-        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">Guardar cuenta</button>
+        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">{{ t('dash.account.save') }}</button>
       </div>
     </form>
   </div>
@@ -943,21 +625,21 @@
 <div class="overlay" id="goal-overlay" role="dialog" aria-modal="true" aria-labelledby="goal-modal-title">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
-      <h2 id="goal-modal-title">Añadir meta</h2>
-      <button class="btn btn-icon btn-ghost" id="close-goal-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="goal-modal-title">{{ t('dash.goal.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-goal-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <form id="goal-form" action="goals" method="post">
       <div class="form-grid">
         <div class="field">
-          <label for="goal-name">Nombre</label>
-          <input id="goal-name" name="name" placeholder="Fondo de emergencia, viaje, coche…" required>
+          <label for="goal-name">{{ t('dash.goal.name') }}</label>
+          <input id="goal-name" name="name" placeholder="{{ t('dash.goal.name.placeholder') }}" required>
         </div>
         <div class="field">
-          <label for="goal-target">Importe objetivo</label>
+          <label for="goal-target">{{ t('dash.goal.target') }}</label>
           <input id="goal-target" name="target_amount" type="number" step="0.01" min="0.01" required>
         </div>
         <div class="field">
-          <label for="goal-currency">Divisa</label>
+          <label for="goal-currency">{{ t('dash.goal.currency') }}</label>
           <select id="goal-currency" name="currency">
             <option value="EUR">EUR (€)</option>
             <option value="USD">USD ($)</option>
@@ -967,24 +649,24 @@
           </select>
         </div>
         <div class="field">
-          <label for="goal-account">Cuenta vinculada</label>
+          <label for="goal-account">{{ t('dash.goal.account') }}</label>
           <select id="goal-account" name="account_id">
-            <option value="">— Progreso manual —</option>
+            <option value="">{{ t('dash.goal.manual.option') }}</option>
             {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
           </select>
-          <span class="help">El progreso se calcula automáticamente desde el valor actual de la cuenta.</span>
+          <span class="help">{{ t('dash.goal.account.help') }}</span>
         </div>
         <div class="field" id="goal-manual-wrap">
-          <label for="goal-manual">Importe actual (manual)</label>
+          <label for="goal-manual">{{ t('dash.goal.manual') }}</label>
           <input id="goal-manual" name="manual_amount" type="number" step="0.01" min="0" placeholder="0.00">
-          <span class="help">Se usa cuando no hay cuenta vinculada.</span>
+          <span class="help">{{ t('dash.goal.manual.help') }}</span>
         </div>
         <div class="field">
-          <label for="goal-date">Fecha objetivo <span class="muted" style="font-weight:400">(opcional)</span></label>
+          <label for="goal-date">{{ t('dash.goal.date') }} <span class="muted" style="font-weight:400">{{ t('dash.goal.date.optional') }}</span></label>
           <input id="goal-date" name="target_date" type="date">
-          <span class="help">Si la indicas, la meta mostrará si vas en plazo o atrasada.</span>
+          <span class="help">{{ t('dash.goal.date.help') }}</span>
         </div>
-        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">Guardar meta</button>
+        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">{{ t('dash.goal.save') }}</button>
       </div>
     </form>
   </div>
@@ -994,17 +676,17 @@
 <div class="overlay" id="holding-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
     <div class="modal-header">
-      <h2 id="modal-title">Nueva posición</h2>
-      <button class="btn btn-icon btn-ghost" id="close-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="modal-title">{{ t('dash.position.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <div class="modal-tabs">
-      <button type="button" class="modal-tab active" id="tab-asset">Activo financiero</button>
-      <button type="button" class="modal-tab" id="tab-cash">Efectivo</button>
+      <button type="button" class="modal-tab active" id="tab-asset">{{ t('dash.position.tab.asset') }}</button>
+      <button type="button" class="modal-tab" id="tab-cash">{{ t('dash.position.tab.cash') }}</button>
     </div>
     <form action="holdings" method="post" id="holding-form">
       <div class="form-grid">
         <div class="field">
-          <label for="account-id">Cuenta</label>
+          <label for="account-id">{{ t('dash.position.account') }}</label>
           <select id="account-id" name="account_id">
             {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
           </select>
@@ -1012,51 +694,51 @@
         <div id="section-asset">
           <div class="form-grid">
             <div class="field">
-              <label for="instrument-search">Buscar activo</label>
+              <label for="instrument-search">{{ t('dash.position.search') }}</label>
               <div class="search-row">
-                <input id="instrument-search" type="text" placeholder="Nvidia, VWCE, IE00BK5BQT80…">
-                <button class="btn" id="instrument-search-btn" type="button">Buscar</button>
+                <input id="instrument-search" type="text" placeholder="{{ t('dash.position.search.placeholder') }}">
+                <button class="btn" id="instrument-search-btn" type="button">{{ t('dash.ticker.search.btn') }}</button>
               </div>
               <div id="instrument-results" class="search-results"></div>
             </div>
             <div class="field">
-              <label>Activo seleccionado</label>
-              <div id="selected-instrument" class="selected-box help">Ningún instrumento seleccionado.</div>
+              <label>{{ t('dash.position.selected') }}</label>
+              <div id="selected-instrument" class="selected-box help">{{ t('dash.position.none') }}</div>
             </div>
           </div>
         </div>
         <div id="section-cash" style="display:none">
           <div class="form-grid">
             <div class="field">
-              <label for="cash-name">Nombre del depósito / cuenta</label>
-              <input id="cash-name" type="text" placeholder="Cuenta remunerada MyInvestor…">
+              <label for="cash-name">{{ t('dash.position.cash.name') }}</label>
+              <input id="cash-name" type="text" placeholder="{{ t('dash.position.cash.placeholder') }}">
             </div>
             <div class="field">
-              <label for="cash-ter">Tipo de interés anual (%)</label>
+              <label for="cash-ter">{{ t('dash.position.cash.rate') }}</label>
               <input id="cash-ter" type="number" step="0.01" min="0" placeholder="3.50">
             </div>
           </div>
         </div>
         <div class="field">
-          <label for="quantity" id="quantity-label">Cantidad</label>
+          <label for="quantity" id="quantity-label">{{ t('dash.position.qty') }}</label>
           <input id="quantity" name="quantity" type="number" step="0.0001" placeholder="10" required>
         </div>
         <div class="field" id="avg-cost-field">
-          <label for="average-cost">Coste medio</label>
+          <label for="average-cost">{{ t('dash.position.avg.cost') }}</label>
           <input id="average-cost" name="average_cost" type="number" step="0.0001" placeholder="120.50" required>
         </div>
         <div class="field" id="deduct-cash-field">
           <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
             <input type="checkbox" name="deduct_cash" id="deduct-cash" value="on" checked style="width:auto;min-height:auto;margin:0">
-            Descontar del efectivo de la cuenta
+            {{ t('dash.position.deduct') }}
           </label>
         </div>
         <div class="field">
-          <label for="notes">Notas</label>
-          <input id="notes" name="notes" placeholder="Opcional">
+          <label for="notes">{{ t('dash.position.notes') }}</label>
+          <input id="notes" name="notes" placeholder="{{ t('dash.position.notes.placeholder') }}">
         </div>
         <div class="field" id="currency-field">
-          <label for="currency-select">Divisa</label>
+          <label for="currency-select">{{ t('dash.position.currency') }}</label>
           <select id="currency-select" name="currency">
             <option value="EUR" {% if default_currency == 'EUR' %}selected{% endif %}>EUR €</option>
             <option value="USD" {% if default_currency == 'USD' %}selected{% endif %}>USD $</option>
@@ -1074,15 +756,15 @@
         <div class="field" id="new-auto-wrap">
           <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
             <input type="checkbox" id="new-auto-enabled" name="auto_enabled" value="on" style="width:auto;min-height:auto;margin:0">
-            Activar aportación automática mensual
+            {{ t('dash.position.auto.enable') }}
           </label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-            <input id="new-auto-amount" name="auto_amount" type="number" step="0.01" min="0.01" placeholder="Importe mensual">
-            <input id="new-auto-day" name="auto_day" type="number" step="1" min="1" max="31" placeholder="Día (1-31)">
+            <input id="new-auto-amount" name="auto_amount" type="number" step="0.01" min="0.01" placeholder="{{ t('dash.position.auto.amount') }}">
+            <input id="new-auto-day" name="auto_day" type="number" step="1" min="1" max="31" placeholder="{{ t('dash.position.auto.day') }}">
           </div>
-          <span class="help">Cada mes se mueve efectivo de esta cuenta a la posición en el día indicado.</span>
+          <span class="help">{{ t('dash.position.auto.help') }}</span>
         </div>
-        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">Guardar posición</button>
+        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">{{ t('dash.position.save') }}</button>
       </div>
     </form>
   </div>
@@ -1092,54 +774,54 @@
 <div class="overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
   <div class="modal">
     <div class="modal-header">
-      <h2 id="edit-modal-title">Editar posición</h2>
-      <button class="btn btn-icon btn-ghost" id="close-edit-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="edit-modal-title">{{ t('dash.edit.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-edit-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <p id="edit-asset-name" class="muted" style="font-size:.85rem;margin-bottom:1rem"></p>
     <form id="edit-form" action="" method="post">
       <div class="form-grid">
         <div class="field">
-          <label for="edit-quantity">Cantidad</label>
+          <label for="edit-quantity">{{ t('dash.edit.qty') }}</label>
           <input id="edit-quantity" name="quantity" type="number" step="0.0001" required>
         </div>
         <div class="field" id="edit-avg-cost-wrap">
-          <label for="edit-average-cost">Coste medio</label>
+          <label for="edit-average-cost">{{ t('dash.edit.avg.cost') }}</label>
           <input id="edit-average-cost" name="average_cost" type="number" step="0.0001">
         </div>
         <div class="field" id="edit-ter-wrap">
-          <label for="edit-ter" id="edit-ter-label">Tipo base anual (%)</label>
-          <input id="edit-ter" name="ter" type="number" step="0.01" min="0" placeholder="Ej: 1.00">
+          <label for="edit-ter" id="edit-ter-label">{{ t('dash.edit.base.rate') }}</label>
+          <input id="edit-ter" name="ter" type="number" step="0.01" min="0" placeholder="{{ t('dash.interest.base.placeholder') }}">
         </div>
         <div class="field" id="edit-interest-wrap" style="display:none">
-          <label>Intereses y promociones</label>
-          <button class="btn" type="button" id="manage-interest-btn">⚙ Gestionar intereses</button>
-          <span class="help">Define tramos (ej. 2.5% hasta 50k), promos sobre dinero nuevo y fechas de fin de oferta.</span>
+          <label>{{ t('dash.edit.interest') }}</label>
+          <button class="btn" type="button" id="manage-interest-btn">{{ t('dash.edit.interest.btn') }}</button>
+          <span class="help">{{ t('dash.edit.interest.help') }}</span>
         </div>
         <div class="field" id="edit-auto-wrap">
           <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
             <input type="checkbox" id="edit-auto-enabled" name="auto_enabled" value="on" style="width:auto;min-height:auto;margin:0">
-            Activar aportación automática mensual
+            {{ t('dash.edit.auto.enable') }}
           </label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-            <input id="edit-auto-amount" name="auto_amount" type="number" step="0.01" min="0.01" placeholder="Importe mensual">
-            <input id="edit-auto-day" name="auto_day" type="number" step="1" min="1" max="31" placeholder="Día (1-31)">
+            <input id="edit-auto-amount" name="auto_amount" type="number" step="0.01" min="0.01" placeholder="{{ t('dash.edit.auto.amount') }}">
+            <input id="edit-auto-day" name="auto_day" type="number" step="1" min="1" max="31" placeholder="{{ t('dash.edit.auto.day') }}">
           </div>
-          <span class="help">Cada mes se mueve efectivo de esta cuenta a la posición en el día indicado.</span>
+          <span class="help">{{ t('dash.edit.auto.help') }}</span>
         </div>
         <div class="field">
-          <label for="edit-notes">Notas</label>
-          <input id="edit-notes" name="notes" placeholder="Opcional">
+          <label for="edit-notes">{{ t('dash.edit.notes') }}</label>
+          <input id="edit-notes" name="notes" placeholder="{{ t('dash.position.notes.placeholder') }}">
         </div>
-        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">Guardar cambios</button>
+        <button class="btn btn-primary" type="submit" style="margin-top:.25rem">{{ t('dash.edit.save') }}</button>
       </div>
     </form>
     <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
       <form id="close-form" action="" method="post" style="display:none">
-        <button class="btn btn-edit" id="close-position-btn" type="submit">⇄ Cerrar posición</button>
+        <button class="btn btn-edit" id="close-position-btn" type="submit">{{ t('dash.edit.close') }}</button>
       </form>
       <form id="delete-form" action="" method="post" style="margin-left:auto">
         <button class="btn btn-danger" type="submit"
-          onclick="return confirm('¿Seguro que quieres eliminar esta posición? Esta acción no se puede deshacer.')">Eliminar posición</button>
+          onclick="return confirm('{{ t('dash.edit.delete.confirm') }}')">{{ t('dash.edit.delete') }}</button>
       </form>
     </div>
   </div>
@@ -1149,8 +831,8 @@
 <div class="overlay" id="detail-overlay" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
   <div class="modal" style="max-width:780px;width:100%">
     <div class="modal-header">
-      <h2 id="detail-modal-title">Detalle de posición</h2>
-      <button class="btn btn-icon btn-ghost" id="close-detail-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="detail-modal-title">{{ t('dash.detail.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-detail-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <div id="detail-body">
       <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">
@@ -1161,12 +843,12 @@
       <div class="detail-grid" id="detail-grid"></div>
       <div style="margin-top:1.1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-          <span style="font-weight:700;font-size:.9rem">Evolución del valor</span>
+          <span style="font-weight:700;font-size:.9rem">{{ t('dash.detail.evolution') }}</span>
           <span id="detail-as-of" class="muted" style="font-size:.75rem"></span>
         </div>
         <div class="chart-wrap" style="height:300px;position:relative">
           <canvas id="detail-chart"></canvas>
-          <p id="detail-chart-empty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">Sin historial de precios para este activo.</p>
+          <p id="detail-chart-empty" class="muted" style="display:none;text-align:center;padding:4rem 1rem 0;font-size:.84rem">{{ t('dash.detail.empty') }}</p>
         </div>
       </div>
       <div id="detail-siblings" style="display:none;margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--border);font-size:.85rem"></div>
@@ -1179,65 +861,65 @@
 <div class="overlay" id="interest-overlay" role="dialog" aria-modal="true" aria-labelledby="interest-modal-title">
   <div class="modal" style="max-width:640px;width:100%">
     <div class="modal-header">
-      <h2 id="interest-modal-title">Intereses y promociones</h2>
-      <button class="btn btn-icon btn-ghost" id="close-interest-modal" type="button" aria-label="Cerrar">✕</button>
+      <h2 id="interest-modal-title">{{ t('dash.interest.title') }}</h2>
+      <button class="btn btn-icon btn-ghost" id="close-interest-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <p id="interest-subtitle" class="muted" style="font-size:.85rem;margin-bottom:1rem"></p>
 
     <form id="interest-base-form" method="post" action="">
       <div class="field" style="margin-bottom:.9rem">
-        <label for="interest-base-rate">Tipo base anual (%)</label>
+        <label for="interest-base-rate">{{ t('dash.interest.base.rate') }}</label>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <input id="interest-base-rate" name="base_rate" type="number" step="0.01" min="0" placeholder="Ej: 1.00">
-          <button class="btn btn-edit" type="submit" style="white-space:nowrap">Guardar base</button>
+          <input id="interest-base-rate" name="base_rate" type="number" step="0.01" min="0" placeholder="{{ t('dash.interest.base.placeholder') }}">
+          <button class="btn btn-edit" type="submit" style="white-space:nowrap">{{ t('dash.interest.save.base') }}</button>
         </div>
-        <span class="help">Se aplica a todo el dinero que no cubre ninguna promoción.</span>
+        <span class="help">{{ t('dash.interest.base.help') }}</span>
       </div>
     </form>
 
-    <div style="font-weight:700;font-size:.85rem;margin:.4rem 0 .5rem">Promociones y tramos</div>
+    <div style="font-weight:700;font-size:.85rem;margin:.4rem 0 .5rem">{{ t('dash.interest.promos') }}</div>
     <div id="interest-promo-list" style="display:grid;gap:.5rem;margin-bottom:.9rem"></div>
 
     <form id="interest-add-form" method="post" action="" style="border-top:1px solid var(--border);padding-top:.9rem">
       <div class="form-grid">
         <div class="field">
-          <label for="interest-add-label">Etiqueta (opcional)</label>
-          <input id="interest-add-label" name="label" placeholder="Ej: Promo 2.5% dinero nuevo">
+          <label for="interest-add-label">{{ t('dash.interest.label') }}</label>
+          <input id="interest-add-label" name="label" placeholder="{{ t('dash.interest.label.placeholder') }}">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
           <div class="field">
-            <label for="interest-add-rate">Tipo (%)</label>
+            <label for="interest-add-rate">{{ t('dash.interest.rate') }}</label>
             <input id="interest-add-rate" name="rate" type="number" step="0.01" min="0.01" required placeholder="2.50">
           </div>
           <div class="field">
-            <label for="interest-add-mode">Aplica a</label>
+            <label for="interest-add-mode">{{ t('dash.interest.mode') }}</label>
             <select id="interest-add-mode" name="mode">
-              <option value="balance">Saldo (hasta un tope)</option>
-              <option value="new">Dinero nuevo (desde inicio)</option>
+              <option value="balance">{{ t('dash.interest.mode.balance') }}</option>
+              <option value="new">{{ t('dash.interest.mode.new') }}</option>
             </select>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
           <div class="field" id="interest-add-cap-wrap">
-            <label for="interest-add-cap">Tope (€, opcional)</label>
-            <input id="interest-add-cap" name="cap" type="number" step="0.01" min="0" placeholder="Ej: 50000">
+            <label for="interest-add-cap">{{ t('dash.interest.cap') }}</label>
+            <input id="interest-add-cap" name="cap" type="number" step="0.01" min="0" placeholder="{{ t('dash.interest.cap.placeholder') }}">
           </div>
           <div class="field" id="interest-add-baseline-wrap" style="display:none">
-            <label for="interest-add-baseline">Saldo al inicio (€)</label>
-            <input id="interest-add-baseline" name="baseline" type="number" step="0.01" min="0" placeholder="Saldo que ya estaba">
+            <label for="interest-add-baseline">{{ t('dash.interest.baseline') }}</label>
+            <input id="interest-add-baseline" name="baseline" type="number" step="0.01" min="0" placeholder="{{ t('dash.interest.baseline.placeholder') }}">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
           <div class="field">
-            <label for="interest-add-start">Inicio (opcional)</label>
+            <label for="interest-add-start">{{ t('dash.interest.start') }}</label>
             <input id="interest-add-start" name="start_date" type="date">
           </div>
           <div class="field">
-            <label for="interest-add-end">Fin de oferta (opcional)</label>
+            <label for="interest-add-end">{{ t('dash.interest.end') }}</label>
             <input id="interest-add-end" name="end_date" type="date">
           </div>
         </div>
-        <button class="btn btn-primary" type="submit">Añadir promoción</button>
+        <button class="btn btn-primary" type="submit">{{ t('dash.interest.add') }}</button>
       </div>
     </form>
   </div>
@@ -1249,6 +931,14 @@
 
 <script>
   (() => {
+    const I18N = {{ i18n_dict(language) | tojson }};
+    const LANG = {{ language | tojson }};
+    const t = (key, vars = {}) => {
+      let s = I18N[key] ?? key;
+      for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+      return s;
+    };
+
     // ── draggable dashboard graphics ─────────────────────────────────────
     const widgetContainers = [...document.querySelectorAll('[data-dashboard-widget-container]')];
     const widgets = [...document.querySelectorAll('[data-dashboard-widget]')];
@@ -1277,7 +967,7 @@
 
     restoreWidgetOrder();
     widgets.forEach((widget) => {
-      widget.title = 'Arrastra para reorganizar';
+      widget.title = t('dash.drag');
       widget.addEventListener('dragstart', (event) => {
         draggedWidget = widget;
         widget.classList.add('dragging');
@@ -1348,7 +1038,7 @@
       applyMetas(false);
       goalForm.reset();
       goalForm.action = 'goals';
-      document.getElementById('goal-modal-title').textContent = 'Añadir meta';
+      document.getElementById('goal-modal-title').textContent = t('dash.goal.title');
       document.getElementById('goal-currency').value = 'EUR';
       syncGoalManual();
       goalOverlay.classList.add('open');
@@ -1360,7 +1050,7 @@
     document.querySelectorAll('[data-goal-edit-id]').forEach(btn => {
       btn.addEventListener('click', () => {
         goalForm.reset();
-        document.getElementById('goal-modal-title').textContent = 'Editar meta';
+        document.getElementById('goal-modal-title').textContent = t('dash.goal.edit.title');
         goalForm.action = `goals/${btn.dataset.goalEditId}/edit`;
         document.getElementById('goal-name').value = btn.dataset.goalName || '';
         document.getElementById('goal-target').value = btn.dataset.goalTarget || '';
@@ -1479,7 +1169,7 @@
           avgWrap.style.display = 'none';
           avgInput.removeAttribute('required');
           avgInput.value = '1';
-          document.getElementById('edit-ter-label').textContent = 'Tipo base anual (%)';
+          document.getElementById('edit-ter-label').textContent = t('dash.interest.base.rate');
           document.getElementById('edit-interest-wrap').style.display = '';
           autoWrap.style.display = 'none';
           autoEnabledInput.checked = false;
@@ -1490,7 +1180,7 @@
           avgWrap.style.display = '';
           avgInput.required = true;
           avgInput.value = cost;
-          document.getElementById('edit-ter-label').textContent = 'TER / tipo de interés anual (%)';
+          document.getElementById('edit-ter-label').textContent = t('dash.edit.ter.label');
           document.getElementById('edit-interest-wrap').style.display = 'none';
           autoWrap.style.display = '';
           autoAmountInput.required = autoEnabledInput.checked;
@@ -1498,7 +1188,7 @@
           closeForm.style.display = '';
           closeForm.action = `holdings/${id}/close`;
           document.getElementById('close-position-btn').onclick = () =>
-            confirm(`¿Cerrar "${asset}"?\n${currSym}${marketVal} se añadirán al efectivo de la cuenta. Esta acción no se puede deshacer.`);
+            confirm(t('dash.edit.close.confirm', { asset, amount: currSym + marketVal }));
         }
 
         editOverlay.classList.add('open');
@@ -1551,7 +1241,7 @@
       document.getElementById('currency-field').style.display = '';
       document.getElementById('deduct-cash-field').style.display = '';
       document.getElementById('new-auto-wrap').style.display = '';
-      quantityLabel.textContent = 'Cantidad'; quantityInput.placeholder = '10'; quantityInput.step = '0.0001';
+      quantityLabel.textContent = t('dash.position.qty'); quantityInput.placeholder = '10'; quantityInput.step = '0.0001';
       assetTypeInput.value = 'stock'; manualPriceInput.value = '';
     }
     function setCashTab() {
@@ -1565,7 +1255,7 @@
       document.getElementById('new-auto-enabled').checked = false;
       document.getElementById('new-auto-amount').removeAttribute('required');
       document.getElementById('new-auto-day').removeAttribute('required');
-      quantityLabel.textContent = 'Importe ({{ default_currency }})'; quantityInput.placeholder = '10000.00'; quantityInput.step = '0.01';
+      quantityLabel.textContent = t('dash.position.amount.label', { cur: '{{ default_currency }}' }); quantityInput.placeholder = '10000.00'; quantityInput.step = '0.01';
       assetTypeInput.value = 'cash'; manualPriceInput.value = '1';
     }
     tabAsset.addEventListener('click', setAssetTab);
@@ -1576,7 +1266,7 @@
     const accountValues = {{ totals_by_account.values()|list|tojson }};
     const typeLabels    = {{ totals_by_type.keys()|list|tojson }};
     const typeValues    = {{ totals_by_type.values()|list|tojson }};
-    const palette = ['#01696f','#006494','#437a22','#c98a00','#a12c7b','#da7101'];
+    const palette = ['#0f6a63','#45707e','#66706b','#8b6f47','#5c8a5e','#a15b55'];
 
     new Chart(document.getElementById('accountChart'), {
       type: 'doughnut',
@@ -1585,13 +1275,13 @@
     });
     new Chart(document.getElementById('typeChart'), {
       type: 'bar',
-      data: { labels: typeLabels, datasets: [{ data: typeValues, backgroundColor: '#01696f', borderRadius: 6 }] },
+      data: { labels: typeLabels, datasets: [{ data: typeValues, backgroundColor: '#0f6a63', borderRadius: 6 }] },
       options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,.08)' } }, x: { grid: { display: false } } } }
     });
 
     // ── fund, geographic and sector allocation ─────────────────────────────
     (() => {
-      const allocationPalette = ['#01696f', '#006494', '#d97925', '#a12c7b', '#719b45', '#bd4b45', '#8b6f47', '#5d6470'];
+      const allocationPalette = ['#0f6a63', '#45707e', '#66706b', '#8b6f47', '#5c8a5e', '#a15b55', '#93a0ad', '#b89b6a'];
       const allocationCurrency = '{{ default_currency_sym }}';
       const allocationOptions = {
         maintainAspectRatio: false,
@@ -1690,12 +1380,12 @@
             datasets: [
               {
                 label: 'Valor', data: values,
-                borderColor: '#24775f', backgroundColor: '#24775f1f',
+                borderColor: '#0f6a63', backgroundColor: '#0f6a631f',
                 borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, fill: true, tension: 0.32,
               },
               {
                 label: 'Invertido', data: costs,
-                borderColor: '#d94f86', borderWidth: 2.5, borderDash: [6, 4],
+                borderColor: '#66706b', borderWidth: 1.5, borderDash: [4, 4],
                 pointRadius: 0, pointHoverRadius: 4, fill: false, stepped: 'after', spanGaps: true,
               },
             ]
@@ -1726,7 +1416,7 @@
       async function openDetail(id) {
         overlay.classList.add('open');
         const grid = document.getElementById('detail-grid');
-        grid.innerHTML = '<div class="muted" style="padding:.5rem 0">Cargando…</div>';
+        grid.innerHTML = '<div class="muted" style="padding:.5rem 0">' + t('dash.loading') + '</div>';
         try {
           const res = await fetch(`api/holding-detail?holding_id=${encodeURIComponent(id)}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1750,21 +1440,21 @@
 
           const pnl = h.pnl;
           grid.innerHTML = [
-            ['Cuenta', h.account],
-            ['Cantidad', fmt(h.quantity, 4)],
-            ['Coste medio', `${h.currency_sym}${fmt(h.average_cost, 4)}`],
-            ['Precio actual', `${h.currency_sym}${fmt(h.current_price, 4)}`],
-            ['Valor actual', `${h.currency_sym}${fmt(h.market_value)}`],
-            ['Invertido', `${h.currency_sym}${fmt(h.quantity * h.average_cost)}`],
-            ['P/L', `${pnl >= 0 ? '+' : ''}${h.currency_sym}${fmt(pnl)} (${pnl >= 0 ? '+' : ''}${fmt(h.pnl_pct)}%)`],
-          ].map(([label, value]) =>
-            `<div class="detail-cell"><div class="detail-label">${label}</div><div class="detail-value ${label === 'P/L' ? pnlCls(pnl) : ''}">${value}</div></div>`
+            ['dash.detail.col.account', h.account],
+            ['dash.detail.col.qty', fmt(h.quantity, 4)],
+            ['dash.detail.col.avg.cost', `${h.currency_sym}${fmt(h.average_cost, 4)}`],
+            ['dash.detail.col.current.price', `${h.currency_sym}${fmt(h.current_price, 4)}`],
+            ['dash.detail.col.current.value', `${h.currency_sym}${fmt(h.market_value)}`],
+            ['dash.detail.col.invested', `${h.currency_sym}${fmt(h.quantity * h.average_cost)}`],
+            ['dash.detail.col.pl', `${pnl >= 0 ? '+' : ''}${h.currency_sym}${fmt(pnl)} (${pnl >= 0 ? '+' : ''}${fmt(h.pnl_pct)}%)`],
+          ].map(([key, value]) =>
+            `<div class="detail-cell"><div class="detail-label">${t(key)}</div><div class="detail-value ${key === 'dash.detail.col.pl' ? pnlCls(pnl) : ''}">${value}</div></div>`
           ).join('');
 
-          document.getElementById('detail-as-of').textContent = data.as_of ? `hasta ${data.as_of}` : '';
+          document.getElementById('detail-as-of').textContent = data.as_of ? t('dash.detail.as.of', { as_of: data.as_of }) : '';
           document.getElementById('detail-source').textContent = data.source === 'none'
-            ? 'Sin historial de precios disponible para este activo.'
-            : `Fuente: ${data.source === 'ft' ? 'FT (NAV diario)' : 'Yahoo Finance'}. El valor se calcula como cantidad actual × precio histórico.`;
+            ? t('dash.detail.source.none')
+            : t('dash.detail.source.text', { src: data.source === 'ft' ? t('dash.detail.source.ft') : t('dash.detail.source.yahoo') });
           renderDetailChart(
             document.getElementById('detail-chart'),
             document.getElementById('detail-chart-empty'),
@@ -1778,7 +1468,7 @@
           const sibEl = document.getElementById('detail-siblings');
           if (data.siblings && data.siblings.length) {
             sibEl.style.display = '';
-            sibEl.innerHTML = '<strong>También en otras cuentas:</strong> ' +
+            sibEl.innerHTML = '<strong>' + t('dash.detail.siblings') + '</strong> ' +
               data.siblings.map(s => `${s.account} (${h.currency_sym}${fmt(s.market_value)})`).join(' · ');
           } else {
             sibEl.style.display = 'none';
@@ -1826,22 +1516,22 @@
         const list = document.getElementById('interest-promo-list');
         const sym = info.currency_sym || '€';
         if (!info.promos || !info.promos.length) {
-          list.innerHTML = '<div class="muted" style="font-size:.84rem;padding:.3rem 0">Sin promociones: todo el saldo usa el tipo base.</div>';
+          list.innerHTML = '<div class="muted" style="font-size:.84rem;padding:.3rem 0">' + t('dash.interest.empty') + '</div>';
         } else {
           list.innerHTML = info.promos.map(p => {
-            const modeTxt = p.mode === 'balance' ? 'Sobre saldo' : 'Dinero nuevo';
+            const modeTxt = p.mode === 'balance' ? t('dash.interest.mode.balance.short') : t('dash.interest.mode.new.short');
             const extra = p.mode === 'balance'
-              ? (p.cap ? ` · hasta ${sym}${Number(p.cap).toLocaleString('es-ES')}` : '')
-              : (p.baseline ? ` · saldo inicial ${sym}${Number(p.baseline).toLocaleString('es-ES')}` : '');
-            const dates = [p.start_date ? `desde ${p.start_date.slice(0, 10)}` : '', p.end_date ? `hasta ${p.end_date.slice(0, 10)}` : ''].filter(Boolean).join(' ');
-            const state = p.active ? '' : ' <span class="muted">(inactiva)</span>';
+              ? (p.cap ? ' · ' + t('dash.interest.up.to', { amount: sym + Number(p.cap).toLocaleString('es-ES') }) : '')
+              : (p.baseline ? ' · ' + t('dash.interest.initial', { amount: sym + Number(p.baseline).toLocaleString('es-ES') }) : '');
+            const dates = [p.start_date ? t('dash.interest.since', { date: p.start_date.slice(0, 10) }) : '', p.end_date ? t('dash.interest.until', { date: p.end_date.slice(0, 10) }) : ''].filter(Boolean).join(' ');
+            const state = p.active ? '' : ' <span class="muted">' + t('dash.interest.inactive') + '</span>';
             return `<div class="detail-cell" style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap">
               <div>
-                <strong>${p.label || 'Promoción'} · ${p.rate}%</strong>
+                <strong>${p.label || t('dash.interest.promo')} · ${p.rate}%</strong>
                 <div class="muted" style="font-size:.76rem">${modeTxt}${extra}${dates ? ' · ' + dates : ''}${state}</div>
               </div>
               <form method="post" action="promos/${p.id}/delete" style="margin:0">
-                <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar esta promoción?')">Eliminar</button>
+                <button class="btn btn-danger" type="submit" onclick="return confirm('${t('dash.interest.delete.confirm')}')">${t('dash.interest.delete')}</button>
               </form>
             </div>`;
           }).join('');
@@ -1858,9 +1548,9 @@
       const noDataEl = document.getElementById('trend-no-data');
       const trendLastRefreshEl = document.getElementById('trend-last-refresh');
       const modeLabels = {
-        all: 'cartera',
-        mix: 'fondos/acciones/ETF',
-        cash: 'efectivo',
+        all: t('dash.trend.mode.all.label'),
+        mix: t('dash.trend.mode.mix.label'),
+        cash: t('dash.trend.mode.cash.label'),
       };
       let selectedPeriod = '1w';
       let selectedMode = 'all';
@@ -1926,7 +1616,7 @@
         }
       }
 
-      function createAllModeChart(ctx, labels, values, pnlData, buyData, buyPR, buyTk, sellData, sellPR, sellTk, lineColor, mutedClr) {
+      function createAllModeChart(ctx, labels, values, pnlData, buyData, buyPR, buyTk, sellData, sellPR, sellTk, lineColor, mutedClr, successClr, dangerClr) {
         // Daily P&L as up/down triangles sitting on each day's closing point.
         const upPnl   = new Array(values.length).fill(null);
         const downPnl = new Array(values.length).fill(null);
@@ -1953,28 +1643,28 @@
               },
               {
                 type: 'line', data: buyData, _tk: buyTk,
-                backgroundColor: '#22a34a', borderColor: '#22a34a',
+                backgroundColor: successClr, borderColor: successClr,
                 borderWidth: 0, showLine: false,
                 pointRadius: buyPR, pointHoverRadius: buyPR.map(r => r ? r + 2 : 0),
                 pointStyle: 'triangle', yAxisID: 'y', order: 0,
               },
               {
                 type: 'line', data: sellData, _tk: sellTk,
-                backgroundColor: '#d45858', borderColor: '#d45858',
+                backgroundColor: dangerClr, borderColor: dangerClr,
                 borderWidth: 0, showLine: false,
                 pointRadius: sellPR, pointHoverRadius: sellPR.map(r => r ? r + 2 : 0),
                 pointStyle: 'rectRot', yAxisID: 'y', order: 0,
               },
               {
                 type: 'line', data: upPnl,
-                backgroundColor: '#22a34a', borderColor: '#22a34a',
+                backgroundColor: successClr, borderColor: successClr,
                 borderWidth: 0, showLine: false,
                 pointRadius: upPR, pointHoverRadius: upPR.map(r => r ? r + 2 : 0),
                 pointStyle: 'triangle', pointRotation: 0, yAxisID: 'y', order: 0,
               },
               {
                 type: 'line', data: downPnl,
-                backgroundColor: '#d45858', borderColor: '#d45858',
+                backgroundColor: dangerClr, borderColor: dangerClr,
                 borderWidth: 0, showLine: false,
                 pointRadius: downPR, pointHoverRadius: downPR.map(r => r ? r + 2 : 0),
                 pointStyle: 'triangle', pointRotation: 180, yAxisID: 'y', order: 0,
@@ -2040,8 +1730,8 @@
               {
                 label: 'Fondos',
                 data: fundValues,
-                borderColor: '#24775f',
-                backgroundColor: '#24775f1f',
+                borderColor: '#0f6a63',
+                backgroundColor: '#0f6a631f',
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 3,
@@ -2053,8 +1743,8 @@
               {
                 label: 'Acciones',
                 data: stockValues,
-                borderColor: '#1d659f',
-                backgroundColor: '#1d659f1f',
+                borderColor: '#45707e',
+                backgroundColor: '#45707e1f',
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 3,
@@ -2066,8 +1756,8 @@
               {
                 label: 'ETF',
                 data: etfValues,
-                borderColor: '#b06a1f',
-                backgroundColor: '#b06a1f1f',
+                borderColor: '#8b6f47',
+                backgroundColor: '#8b6f471f',
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 3,
@@ -2079,15 +1769,12 @@
               {
                 label: 'Invertido',
                 data: investedValues,
-                borderColor: '#d94f86',
-                backgroundColor: '#bfe8ed55',
-                borderWidth: 2.5,
-                pointBackgroundColor: '#d94f86',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1,
-                pointRadius: 1.5,
-                pointHoverRadius: 5,
-                fill: 'origin',
+                borderColor: '#66706b',
+                borderDash: [4, 4],
+                borderWidth: 1.5,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                fill: false,
                 tension: 0.35,
                 cubicInterpolationMode: 'monotone',
                 spanGaps: true,
@@ -2139,8 +1826,8 @@
               {
                 label: 'Efectivo',
                 data: cashValues,
-                borderColor: '#7c8a2f',
-                backgroundColor: '#7c8a2f2b',
+                borderColor: '#45707e',
+                backgroundColor: '#45707e2b',
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHoverRadius: 3,
@@ -2232,13 +1919,13 @@
             });
 
             if (trendLastRefreshEl) {
-              trendLastRefreshEl.textContent = `Precios actualizados: ${allData.last_refresh || '—'}`;
+              trendLastRefreshEl.textContent = t('dash.trend.refresh') + ' ' + (allData.last_refresh || '—');
             }
 
             const hasAnyData = [fundValues, stockValues, etfValues, investedValues].some(arr => arr.some(v => v !== null && v !== undefined));
             if (noDataEl) {
               noDataEl.style.display = hasAnyData ? 'none' : 'flex';
-              noDataEl.textContent = `Sin datos todavía para ${modeLabels[mode] || mode} — los puntos se guardan tras cada actualización de precios.`;
+              noDataEl.textContent = t('dash.trend.no.data.mode', { mode: modeLabels[mode] || mode });
             }
 
             destroyTrendChart();
@@ -2254,13 +1941,13 @@
             const cashValues = cashData.values || [];
 
             if (trendLastRefreshEl) {
-              trendLastRefreshEl.textContent = `Precios actualizados: ${cashData.last_refresh || '—'}`;
+              trendLastRefreshEl.textContent = t('dash.trend.refresh') + ' ' + (cashData.last_refresh || '—');
             }
 
             const hasCashData = cashValues.some(v => v !== null && v !== undefined);
             if (noDataEl) {
               noDataEl.style.display = hasCashData ? 'none' : 'flex';
-              noDataEl.textContent = `Sin datos todavía para ${modeLabels[mode] || mode} — los puntos se guardan tras cada actualización de precios.`;
+              noDataEl.textContent = t('dash.trend.no.data.mode', { mode: modeLabels[mode] || mode });
             }
 
             destroyTrendChart();
@@ -2278,12 +1965,12 @@
           const lastRefresh = data.last_refresh || null;
 
           if (trendLastRefreshEl) {
-            trendLastRefreshEl.textContent = `Precios actualizados: ${lastRefresh || '—'}`;
+            trendLastRefreshEl.textContent = t('dash.trend.refresh') + ' ' + (lastRefresh || '—');
           }
 
           if (noDataEl) {
             noDataEl.style.display = labels.length ? 'none' : 'flex';
-            noDataEl.textContent = `Sin datos todavía para ${modeLabels[mode] || mode} — los puntos se guardan tras cada actualización de precios.`;
+            noDataEl.textContent = t('dash.trend.no.data.mode', { mode: modeLabels[mode] || mode });
           }
 
           const up = values.length < 2 || values[values.length - 1] >= values[0];
@@ -2299,13 +1986,13 @@
 
           destroyTrendChart();
           if (labels.length) {
-            createAllModeChart(ctx, labels, values, pnlData, buyData, buyPR, buyTk, sellData, sellPR, sellTk, lineColor, mutedClr);
+            createAllModeChart(ctx, labels, values, pnlData, buyData, buyPR, buyTk, sellData, sellPR, sellTk, lineColor, mutedClr, successClr, dangerClr);
           }
         } catch (_) {
           destroyTrendChart();
           if (noDataEl) {
             noDataEl.style.display = 'flex';
-            noDataEl.textContent = 'No se pudo cargar la evolución en este momento.';
+            noDataEl.textContent = t('dash.trend.error');
           }
         }
       }
@@ -2352,15 +2039,15 @@
     const doSearch = async () => {
       if (searching) return;
       const q = searchInput.value.trim();
-      if (q.length < 2) { resultsBox.innerHTML = '<div class="help">Escribe al menos 2 caracteres.</div>'; return; }
+      if (q.length < 2) { resultsBox.innerHTML = '<div class="help">' + t('dash.ticker.min.chars') + '</div>'; return; }
       searching = true;
       searchBtn.disabled = true;
-      resultsBox.innerHTML = '<div class="help">Buscando…</div>';
+      resultsBox.innerHTML = '<div class="help">' + t('dash.ticker.searching') + '</div>';
       try {
         const res  = await fetch(`api/search-symbol?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         const results = data.results || [];
-        if (!results.length) { resultsBox.innerHTML = '<div class="help">No se encontraron instrumentos. El proveedor de datos puede estar limitando peticiones; espera unos segundos y reintenta.</div>'; return; }
+        if (!results.length) { resultsBox.innerHTML = '<div class="help">' + t('dash.ticker.none') + '</div>'; return; }
         resultsBox.innerHTML = '';
         results.forEach(item => {
           const btn = document.createElement('button');
@@ -2377,7 +2064,7 @@
           });
           resultsBox.appendChild(btn);
         });
-      } catch (_) { resultsBox.innerHTML = '<div class="help">Error al buscar instrumentos. Posible límite de peticiones; espera unos segundos.</div>'; }
+      } catch (_) { resultsBox.innerHTML = '<div class="help">' + t('dash.ticker.search.error') + '</div>'; }
       finally { searching = false; searchBtn.disabled = false; }
     };
     searchBtn.addEventListener('click', () => { clearTimeout(searchTimer); doSearch(); });
@@ -2493,7 +2180,7 @@
       } else {
         if (!assetNameInput.value || !tickerInput.value) {
           e.preventDefault();
-          selectedBox.innerHTML = '<span style="color:var(--danger)">Debes seleccionar primero un instrumento de la lista.</span>';
+          selectedBox.innerHTML = '<span style="color:var(--danger)">' + t('dash.position.select.first') + '</span>';
         }
       }
     });
@@ -2522,16 +2209,16 @@
     const doTickerSearch = async () => {
       if (tickerSearching) return;
       const q = tickerSearchIn.value.trim();
-      if (q.length < 2) { tickerResults.innerHTML = '<div class="help">Escribe al menos 2 caracteres.</div>'; return; }
+      if (q.length < 2) { tickerResults.innerHTML = '<div class="help">' + t('dash.ticker.min.chars') + '</div>'; return; }
       tickerSearching = true;
       tickerSearchBtn.disabled = true;
-      tickerResults.innerHTML = '<div class="help">Buscando\u2026</div>';
+      tickerResults.innerHTML = '<div class="help">' + t('dash.ticker.searching') + '</div>';
       tickerPriceBox.innerHTML = '';
       try {
         const res  = await fetch(`api/search-symbol?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         const results = data.results || [];
-        if (!results.length) { tickerResults.innerHTML = '<div class="help">No se encontraron instrumentos. El proveedor de datos puede estar limitando peticiones; espera unos segundos y reintenta.</div>'; return; }
+        if (!results.length) { tickerResults.innerHTML = '<div class="help">' + t('dash.ticker.none') + '</div>'; return; }
         tickerResults.innerHTML = '';
         results.forEach(item => {
           const btn = document.createElement('button');
@@ -2543,7 +2230,7 @@
           });
           tickerResults.appendChild(btn);
         });
-      } catch (_) { tickerResults.innerHTML = '<div class="help">Error al buscar instrumentos. Posible límite de peticiones; espera unos segundos.</div>'; }
+      } catch (_) { tickerResults.innerHTML = '<div class="help">' + t('dash.ticker.search.error') + '</div>'; }
       finally { tickerSearching = false; tickerSearchBtn.disabled = false; }
     };
     tickerSearchBtn.addEventListener('click', () => { clearTimeout(tickerSearchTimer); doTickerSearch(); });
@@ -2551,7 +2238,7 @@
     tickerSearchIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(tickerSearchTimer); doTickerSearch(); } });
 
     async function loadTickerPrice(ticker, name) {
-      tickerPriceBox.innerHTML = '<div class="help" style="padding:.5rem 0">Cargando\u2026 <span class="spinning">\u21bb</span></div>';
+      tickerPriceBox.innerHTML = '<div class="help" style="padding:.5rem 0">' + t('dash.loading') + ' <span class="spinning">\u21bb</span></div>';
       try {
         const res = await fetch(`api/ticker-price?ticker=${encodeURIComponent(ticker)}`);
         const d   = await res.json();
@@ -2569,17 +2256,17 @@
                 <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.2rem">${ticker} \u00b7 ${name}</div>
                 <div class="ticker-price-value">${d.price != null ? sym + d.price.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4}) : '\u2014'}</div>
                 ${changeHtml}
-                ${d.prev_close ? `<div class="muted" style="font-size:.76rem;margin-top:.35rem">Cierre anterior: ${sym}${d.prev_close.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>` : ''}
+                ${d.prev_close ? `<div class="muted" style="font-size:.76rem;margin-top:.35rem">${t('dash.ticker.prev.close')} ${sym}${d.prev_close.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4})}</div>` : ''}
               </div>
-              <button type="button" class="btn btn-primary" id="add-to-wl-btn" style="white-space:nowrap;align-self:flex-start">\u2606 Favoritos</button>
+              <button type="button" class="btn btn-primary" id="add-to-wl-btn" style="white-space:nowrap;align-self:flex-start">${t('dash.ticker.add.wl')}</button>
             </div>
           </div>
           <div id="ticker-analysis-box" style="margin-top:.75rem">
-            <div class="help" style="padding:.25rem 0">Calculando se\u00f1al t\u00e9cnica\u2026 <span class="spinning">\u21bb</span></div>
+            <div class="help" style="padding:.25rem 0">${t('dash.ticker.analyzing')} <span class="spinning">\u21bb</span></div>
           </div>`;
         document.getElementById('add-to-wl-btn')?.addEventListener('click', () => addToWatchlist(ticker, name));
         loadTickerAnalysis(ticker, sym);
-      } catch (_) { tickerPriceBox.innerHTML = '<div class="help" style="padding:.5rem 0">Error al cargar precio.</div>'; }
+      } catch (_) { tickerPriceBox.innerHTML = '<div class="help" style="padding:.5rem 0">' + t('dash.ticker.price.error') + '</div>'; }
     }
 
     async function loadTickerAnalysis(ticker, sym) {
@@ -2601,22 +2288,22 @@
 
       let srHtml = '';
       if (sr.nearest_support || sr.nearest_resistance) {
-        srHtml = `<div class="ta-section"><div class="ta-section-title">Soporte / Resistencia</div><div class="sr-levels">`;
+        srHtml = `<div class="ta-section"><div class="ta-section-title">${t('dash.ta.sr')}</div><div class="sr-levels">`;
         if (sr.nearest_resistance) srHtml += `
           <div class="sr-row sr-res">
-            <span>\u25b2 Resistencia</span>
+            <span>\u25b2 ${t('dash.ta.resistance')}</span>
             <strong>${sym}${sr.nearest_resistance.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong>
             <span class="muted" style="font-size:.74rem">+${sr.resistance_pct != null ? sr.resistance_pct.toFixed(1) : '?'}%</span>
           </div>`;
         srHtml += `
           <div class="sr-row sr-cur">
-            <span>\u25cf Precio actual</span>
+            <span>\u25cf ${t('dash.ta.current')}</span>
             <strong>${sym}${ind.current_price.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong>
             <span></span>
           </div>`;
         if (sr.nearest_support) srHtml += `
           <div class="sr-row sr-sup">
-            <span>\u25bc Soporte</span>
+            <span>\u25bc ${t('dash.ta.support')}</span>
             <strong>${sym}${sr.nearest_support.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong>
             <span class="muted" style="font-size:.74rem">-${sr.support_pct != null ? sr.support_pct.toFixed(1) : '?'}%</span>
           </div>`;
@@ -2638,21 +2325,21 @@
       return `<div class="ta-panel">
         <div class="ta-header">
           <div style="min-width:130px">
-            <div class="ta-badge" style="background:color-mix(in oklab,${badgeBg} 12%,transparent);color:${badgeBg};border:1.5px solid ${badgeBg}">${action}</div>
-            <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem">Convicci\u00f3n ${conviction}</div>
+            <div class="ta-badge" style="background:color-mix(in oklab,${badgeBg} 12%,transparent);color:${badgeBg};border:1.5px solid ${badgeBg}">${LANG === 'en' ? action_en : action}</div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem">${t('dash.ta.conviction', { conviction })}</div>
             <div class="conviction-bar"><div class="conviction-fill" style="width:${conviction_pct}%;background:${badgeBg}"></div></div>
             <div style="font-size:.7rem;color:var(--muted);margin-top:.15rem">${conviction_pct.toFixed(0)}%</div>
           </div>
           <div class="ta-indicators">
             <div class="ta-ind-row"><span class="ta-ind-name">RSI (14)</span><span class="ta-ind-val" style="color:${rsiColor}">${ind.rsi}</span></div>
-            <div class="ta-ind-row"><span class="ta-ind-name">MACD</span><span class="ta-ind-val" style="color:${ind.macd_hist >= 0 ? 'var(--success)' : 'var(--danger)'}">${ind.macd_hist >= 0 ? '\u2191 Alcista' : '\u2193 Bajista'}</span></div>
+            <div class="ta-ind-row"><span class="ta-ind-name">MACD</span><span class="ta-ind-val" style="color:${ind.macd_hist >= 0 ? 'var(--success)' : 'var(--danger)'}">${ind.macd_hist >= 0 ? t('dash.ta.bullish') : t('dash.ta.bearish')}</span></div>
             <div class="ta-ind-row"><span class="ta-ind-name">Bollinger</span><span class="ta-ind-val" style="font-size:.73rem">${sym}${ind.bollinger_lower.toLocaleString('es-ES',{minimumFractionDigits:2})} \u2013 ${sym}${ind.bollinger_upper.toLocaleString('es-ES',{minimumFractionDigits:2})}</span></div>
-            ${mas ? `<div class="ta-ind-row"><span class="ta-ind-name">Medias</span><span class="ta-ind-val" style="font-size:.71rem">${mas}</span></div>` : ''}
+            ${mas ? `<div class="ta-ind-row"><span class="ta-ind-name">${t('dash.ta.ma')}</span><span class="ta-ind-val" style="font-size:.71rem">${mas}</span></div>` : ''}
           </div>
         </div>
         ${srHtml}
         <div class="ta-section">
-          <div class="ta-section-title">Se\u00f1ales (${(signals||[]).length})</div>
+          <div class="ta-section-title">${t('dash.ta.signals', { n: (signals||[]).length })}</div>
           <div class="ta-signal-list">${signalsHtml}</div>
         </div>
       </div>`;
@@ -2665,7 +2352,7 @@
       try {
         await fetch('watchlist/add', { method: 'POST', body: fd });
         const btn = document.getElementById('add-to-wl-btn');
-        if (btn) { btn.textContent = '\u2605 En favoritos'; btn.disabled = true; btn.classList.remove('btn-primary'); }
+        if (btn) { btn.textContent = t('dash.ticker.added.wl'); btn.disabled = true; btn.classList.remove('btn-primary'); }
         loadWatchlist();
       } catch (_) {}
     }
@@ -2678,21 +2365,21 @@
         const res   = await fetch('api/watchlist-prices');
         const items = await res.json();
         if (!Array.isArray(items) || !items.length) {
-          container.innerHTML = '<p class="muted" style="font-size:.85rem;padding:.25rem 0">Sin favoritos. Usa <strong>\ud83d\udd0d Cotizaci\u00f3n</strong> para buscar y a\u00f1adir tickers.</p>';
+          container.innerHTML = '<p class="muted" style="font-size:.85rem;padding:.25rem 0">' + t('dash.watchlist.empty') + ' <strong>' + t('dash.watchlist.empty.mid') + '</strong> ' + t('dash.watchlist.empty.tail') + '</p>';
           return;
         }
         container.innerHTML = '';
         items.forEach(item => {
           const div = document.createElement('div');
           div.className = 'watchlist-item';
-          div.title = 'Clic para analizar';
+          div.title = t('dash.watchlist.analyze');
           div.innerHTML = `
             <div class="watchlist-item-info">
               <div class="watchlist-item-ticker">${item.ticker}</div>
               <div class="watchlist-item-name">${item.name || item.ticker}</div>
             </div>
             <div class="watchlist-item-price">${item.price != null ? item.price.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:4}) : '\u2014'}</div>
-            <button class="wl-remove" data-wl-id="${item.id}" title="Quitar de favoritos">\u2715</button>`;
+            <button class="wl-remove" data-wl-id="${item.id}" title="${t('dash.watchlist.remove')}">\u2715</button>`;
           div.addEventListener('click', (e) => {
             if (e.target.closest('.wl-remove')) return;
             openTickerModal(item.ticker, item.name || item.ticker);
@@ -2706,7 +2393,7 @@
         });
       } catch (_) {
         const c = document.getElementById('watchlist-container');
-        if (c) c.innerHTML = '<p class="muted" style="font-size:.85rem">Error al cargar favoritos.</p>';
+        if (c) c.innerHTML = '<p class="muted" style="font-size:.85rem">' + t('dash.watchlist.error') + '</p>';
       }
     }
 

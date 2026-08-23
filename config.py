@@ -81,6 +81,16 @@ APPS = [
         "path": "/FitTracker",
         "port": 8001,
     },
+    {
+        "id": "wattrank",
+        "name": "WattRank",
+        "tagline": "Compara tu tarifa de luz",
+        "desc": "Comparador de tarifas eléctricas con precios reales del mercado.",
+        "icon": "⚡",
+        "color": "#d97706",
+        "path": "/WattRank",
+        "port": 8003,
+    },
 ]
 CURRENT_APP_ID = "portfolio"
 

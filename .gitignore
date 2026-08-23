@@ -16,3 +16,7 @@ static/record_attachments/
 # Freebuff
 .freebuff/
 .freebuff/project-id
+.agents/
+.codex/
+.impe
+.impeccable/

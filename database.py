@@ -4,7 +4,10 @@ from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL, _categorize_expense, pwd_context
 from models import Base
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False, "timeout": 15},
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 Base.metadata.create_all(engine)

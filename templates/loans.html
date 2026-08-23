@@ -1,77 +1,45 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}">
+<html lang="{{ language|default('es') }}" data-device="{{ device_of(request) }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="{{ base_path(request) }}/">
-  <title>Simulador de hipoteca · Portfolio Pi</title>
+  <title>{{ t('loans.title') }} · Portfolio Pi</title>
   <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="apple-touch-icon" href="static/favicon.svg">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg:#f4efe8; --bg-accent:#efe4d6; --surface:rgba(255,255,255,.84); --surface-2:rgba(255,255,255,.58);
-      --surface-strong:#fffdf9; --border:rgba(28,35,34,.10); --text:#171b1a; --muted:#66706b;
-      --primary:#0f6a63; --primary-hover:#0b5751; --accent:#c9792b; --success:#2d7b53; --danger:#b54848;
-      --radius:1.15rem; --shadow:0 24px 60px rgba(42,42,32,.08); --shadow-soft:0 8px 24px rgba(42,42,32,.06); color-scheme:light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:#0f1313; --bg-accent:#16201d; --surface:rgba(24,30,29,.84); --surface-2:rgba(34,42,40,.72);
-        --surface-strong:#1a2120; --border:rgba(255,255,255,.08); --text:#eef1ed; --muted:#9aa7a0;
-        --primary:#6eb7ac; --primary-hover:#8cc8bf; --accent:#e2a15f; --success:#73bf8b; --danger:#ea7b7b;
-        --shadow:0 24px 60px rgba(0,0,0,.28); --shadow-soft:0 8px 24px rgba(0,0,0,.18); color-scheme:dark;
-      }
-    }
-    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-    body {
-      font-family:'Satoshi','Inter',system-ui,sans-serif; color:var(--text); line-height:1.6; min-height:100vh;
-      background:radial-gradient(circle at top left,color-mix(in oklab,var(--bg-accent) 90%,white) 0,transparent 30%),
-        radial-gradient(circle at 100% 0,color-mix(in oklab,var(--primary) 12%,transparent) 0,transparent 32%),
-        linear-gradient(180deg,var(--bg) 0%,color-mix(in oklab,var(--bg) 86%,white) 100%);
-    }
-    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px); background-size:28px 28px; mask-image:linear-gradient(180deg,rgba(0,0,0,.14),transparent 65%); }
-    a,button,input,select { font:inherit; color:inherit; }
-    .shell { max-width:1400px; margin:0 auto; padding:1.1rem 1.25rem 2.25rem; position:relative; }
-    .header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1.1rem 1.15rem; margin-bottom:1rem; border:1px solid var(--border); border-radius:1.35rem; background:linear-gradient(135deg,color-mix(in oklab,var(--surface-strong) 82%,var(--accent) 8%) 0%,var(--surface) 58%,color-mix(in oklab,var(--surface) 92%,var(--primary) 8%) 100%); backdrop-filter:blur(14px); box-shadow:var(--shadow); }
+  <!-- Compiled by _shared/tailwind/build.sh -->
+  <link rel="stylesheet" href="static/tailwind.css">
+    <link rel="stylesheet" href="static/app.css">
+    <style>
+    /* loans-specific layout (shared tokens/components live in static/app.css) */
+    .shell { max-width:1400px; }
+
     .header-copy { display:grid; gap:.48rem; max-width:700px; }
-    .kicker,.tag { display:inline-flex; width:max-content; padding:.32rem .68rem; border-radius:999px; background:color-mix(in oklab,var(--surface-strong) 72%,var(--accent) 28%); color:var(--text); font-size:.69rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
-    h1 { font-size:clamp(2rem,4vw,3.35rem); letter-spacing:-.07em; line-height:.96; }
-    .header-copy p { color:var(--muted); max-width:64ch; font-size:.94rem; }
+    .header h1 { font-size:clamp(1.9rem,3vw,2.9rem); letter-spacing:-.06em; line-height:.96; }
+    .header p { font-size:.94rem; max-width:64ch; }
     .actions { display:flex; align-items:center; justify-content:flex-end; gap:.45rem; flex-wrap:wrap; }
-    .user-chip { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:50%; background:color-mix(in oklab,var(--primary) 22%,var(--surface-strong)); border:1px solid var(--border); color:var(--primary); font-weight:700; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:.42rem; min-height:40px; padding:.62rem .88rem; border:1px solid var(--border); border-radius:999px; background:var(--surface-2); text-decoration:none; font-size:.84rem; font-weight:600; cursor:pointer; box-shadow:var(--shadow-soft); transition:transform .14s,background .14s,border-color .14s; }
-    .btn:hover { transform:translateY(-1px); background:color-mix(in oklab,var(--surface-strong) 78%,var(--primary) 22%); border-color:color-mix(in oklab,var(--border) 60%,var(--primary) 40%); }
-    .btn-primary { color:#fff; background:linear-gradient(135deg,var(--primary),color-mix(in oklab,var(--primary) 75%,var(--accent) 25%)); border-color:transparent; }
-    .btn-primary:hover { background:linear-gradient(135deg,var(--primary-hover),var(--primary)); }
-    .btn-icon { height:42px; padding:0; border-radius:999px; gap:0; overflow:hidden; transition:padding .18s ease; }
-    .btn-icon .icon-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; flex:0 0 42px; }
-    .btn-icon .icon-label { display:inline-block; max-width:0; opacity:0; overflow:hidden; white-space:nowrap; font-size:.85rem; font-weight:600; transition:max-width .18s ease, opacity .18s ease; }
-    .btn-icon:hover { padding-right:.9rem; transition-delay:.2s; }
-    .btn-icon:focus-visible { padding-right:.9rem; }
-    .btn-icon:hover .icon-label { max-width:160px; opacity:1; transition-delay:.2s; }
-    .btn-icon:focus-visible .icon-label { max-width:160px; opacity:1; }
+
+    .tag { display:inline-flex; width:max-content; padding:.2rem .48rem; border-radius:999px; background:color-mix(in oklab,var(--primary) 12%,var(--surface)); color:var(--primary); font-size:.61rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+
     .layout { display:grid; grid-template-columns:minmax(280px,360px) minmax(0,1fr); gap:1rem; align-items:start; }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem; box-shadow:var(--shadow-soft); backdrop-filter:blur(14px); overflow:hidden; }
-    .card::before { content:""; display:block; height:1px; margin:-1.1rem -1.1rem 1rem; background:linear-gradient(90deg,color-mix(in oklab,var(--accent) 55%,transparent),transparent 65%); }
+    .card { padding:1.1rem; }
     .card h2 { font-size:1.05rem; letter-spacing:-.03em; }
     .card h3 { font-size:.88rem; letter-spacing:-.02em; }
     .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.7rem; margin-bottom:.85rem; }
     .card-head p,.note,.help { color:var(--muted); font-size:.78rem; line-height:1.45; }
+
     .form-grid { display:grid; gap:.7rem; }
-    .field { display:grid; gap:.24rem; }
-    .field label { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
     .field small { color:var(--muted); font-size:.73rem; }
-    input,select { width:100%; min-height:42px; padding:.58rem .9rem; line-height:1.35; border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong) 66%,var(--surface-2) 34%); font-size:.9rem; }
-    input:focus,select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in oklab,var(--primary) 22%,transparent); }
     .input-unit { position:relative; }
     .input-unit input { padding-right:3rem; }
     .input-unit span { position:absolute; right:.78rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.8rem; pointer-events:none; }
     .form-divider { height:1px; background:var(--border); margin:.25rem 0 .1rem; }
     .assumption { display:flex; gap:.6rem; align-items:flex-start; padding:.78rem; margin-top:.9rem; border-radius:.75rem; background:color-mix(in oklab,var(--primary) 8%,var(--surface-2)); color:var(--muted); font-size:.75rem; line-height:1.45; }
     .assumption strong { color:var(--text); }
+    .assumption svg { width:14px; height:14px; flex-shrink:0; margin-top:.15rem; color:var(--primary); }
     .tool-actions { display:grid; grid-template-columns:1fr; gap:.5rem; margin-top:.9rem; }
-    .tool-actions .btn { width:100%; }
+
     .saved-section { margin-top:1rem; }
     .saved-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:.7rem; }
     .saved-item { display:grid; gap:.45rem; padding:.8rem; border:1px solid var(--border); border-radius:.85rem; background:var(--surface-2); }
@@ -81,10 +49,8 @@
     .saved-item-actions { display:flex; gap:.4rem; flex-wrap:wrap; }
     .saved-item-actions .btn { flex:1; min-height:34px; padding:.42rem .62rem; font-size:.75rem; }
     .empty-saved { color:var(--muted); font-size:.8rem; }
-    .overlay { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(0,0,0,.38); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .18s ease; }
-    .overlay.open { opacity:1; pointer-events:auto; }
-    .modal { width:min(100%,560px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-strong); box-shadow:0 18px 55px rgba(0,0,0,.2); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
-    .overlay.open .modal { transform:translateY(0) scale(1); }
+
+    .modal { width:min(100%,560px); max-height:92vh; overflow:auto; padding:1.2rem; background:var(--surface-strong); box-shadow:var(--shadow); }
     .modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:1rem; }
     .modal-head h2 { font-size:1.15rem; }
     .modal-head p { color:var(--muted); font-size:.78rem; margin-top:.2rem; }
@@ -98,20 +64,29 @@
     .recommendation-metric strong { display:block; font-size:1rem; }
     .recommendation-metric span { color:var(--muted); font-size:.68rem; }
     .tips-list { display:grid; gap:.55rem; list-style:none; }
-    .tips-list li { padding:.65rem .7rem .65rem 1.8rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface-2); font-size:.8rem; position:relative; }
-    .tips-list li::before { content:'✓'; position:absolute; left:.7rem; color:var(--primary); font-weight:700; }
+    .tips-list li { padding:.65rem .7rem .65rem 2rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface-2); font-size:.8rem; position:relative; }
+    .tips-list li::before {
+      content:"";
+      position:absolute; left:.7rem; top:.72rem;
+      width:13px; height:13px;
+      background-color:var(--primary);
+      -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+      mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+      -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+      -webkit-mask-size:contain; mask-size:contain;
+    }
     .recommendation-disclaimer { margin-top:.8rem; color:var(--muted); font-size:.7rem; line-height:1.45; }
     .form-error { color:var(--danger); font-size:.78rem; min-height:1.1em; }
+
     .results { display:grid; gap:1rem; min-width:0; }
     .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.7rem; }
     .metric { padding:.82rem; border:1px solid var(--border); border-radius:.85rem; background:var(--surface-2); min-width:0; }
     .metric-label { color:var(--muted); font-size:.64rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
     .metric-value { margin-top:.25rem; font-size:clamp(1.25rem,2.4vw,2rem); font-weight:700; letter-spacing:-.06em; line-height:1.1; overflow-wrap:anywhere; }
     .metric-sub { color:var(--muted); font-size:.7rem; margin-top:.18rem; }
-    .metric.primary { background:color-mix(in oklab,var(--primary) 12%,var(--surface)); border-color:color-mix(in oklab,var(--primary) 28%,var(--border)); }
+    .metric.primary { border-color:color-mix(in oklab,var(--primary) 28%,var(--border)); }
     .metric.primary .metric-value { color:var(--primary); }
-    .cost-grid { position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:1rem; row-gap:0; }
-    .cost-grid::before { position:absolute; top:0; left:1.1rem; right:1.1rem; margin:0; }
+    .cost-grid { position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:1rem; row-gap:0; overflow:visible; }
     .breakdown { display:grid; gap:.55rem; }
     .breakdown-row { display:flex; justify-content:space-between; gap:1rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); font-size:.86rem; }
     .breakdown-row:last-child { border-bottom:0; padding-bottom:0; font-weight:700; }
@@ -122,145 +97,180 @@
     .bar-track { display:flex; height:9px; border-radius:999px; background:color-mix(in oklab,var(--muted) 15%,transparent); overflow:hidden; }
     .bar-fill { height:100%; border-radius:999px; min-width:2px; }
     .bar-fill.principal { background:var(--primary); }
-    .bar-fill.interest { background:var(--accent); }
+    .bar-fill.interest { background:var(--muted); }
     .bar-value { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
     .legend { display:flex; gap:1rem; flex-wrap:wrap; margin-top:.75rem; color:var(--muted); font-size:.73rem; }
     .legend span { display:inline-flex; align-items:center; gap:.35rem; }
     .legend i { width:.58rem; height:.58rem; border-radius:50%; display:inline-block; }
     .legend .principal { background:var(--primary); } .legend .interest { background:var(--accent); }
     .table-wrap { overflow:auto; max-height:530px; border:1px solid var(--border); border-radius:.8rem; }
-    table { width:100%; min-width:660px; border-collapse:separate; border-spacing:0; font-size:.8rem; }
-    th { position:sticky; top:0; z-index:1; padding:.62rem .7rem; background:color-mix(in oklab,var(--surface) 88%,var(--bg-accent) 12%); border-bottom:1px solid var(--border); color:var(--muted); font-size:.63rem; letter-spacing:.1em; text-align:right; text-transform:uppercase; white-space:nowrap; }
-    th:first-child,td:first-child { text-align:left; } td { padding:.62rem .7rem; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap; font-variant-numeric:tabular-nums; }
-    tbody tr:last-child td { border-bottom:0; } tbody tr:hover { background:color-mix(in oklab,var(--surface-strong) 82%,var(--primary) 18%); }
+    table { min-width:660px; font-size:.8rem; }
+    th { padding:.62rem .7rem; text-align:right; letter-spacing:.1em; font-size:.63rem; white-space:normal; }
+    th:first-child,td:first-child { text-align:left; } td { padding:.62rem .7rem; text-align:right; font-variant-numeric:tabular-nums; }
     .disclaimer { color:var(--muted); font-size:.72rem; line-height:1.5; }
-    .tag { font-size:.61rem; padding:.2rem .48rem; background:color-mix(in oklab,var(--primary) 12%,var(--surface)); color:var(--primary); letter-spacing:.08em; }
+
     @media (max-width:1050px) { .layout { grid-template-columns:1fr; } .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .form-divider,.assumption { grid-column:1/-1; } }
-    @media (max-width:720px) { .shell { padding:.8rem .75rem 1.5rem; } .header { padding:.9rem; } .header-copy p { font-size:.86rem; } .actions { justify-content:flex-start; width:100%; } .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .cost-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .form-divider,.assumption { grid-column:auto; } .btn { flex:1; } .btn-icon { flex:0 0 42px; width:42px; } .modal-form-grid,.recommendation-metrics { grid-template-columns:1fr; } }
-    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { transition-duration:.01ms !important; animation-duration:.01ms !important; } }
-  </style>
+    @media (max-width:720px) { .header { padding:.9rem; } .header p { font-size:.86rem; } .actions { justify-content:flex-start; width:100%; } .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .cost-grid { grid-template-columns:1fr; } .form-grid { grid-template-columns:1fr; } .form-divider,.assumption { grid-column:auto; } .btn { flex:1; } .btn-icon { flex:0 0 42px; width:42px; } .modal-form-grid,.recommendation-metrics { grid-template-columns:1fr; } }
+
+    /* server-driven device overrides (on top of responsive breakpoints) */
+    html[data-device="mobile"] .layout { grid-template-columns:1fr; }
+    html[data-device="mobile"] .form-grid { grid-template-columns:1fr; }
+    html[data-device="mobile"] .form-divider, html[data-device="mobile"] .assumption { grid-column:auto; }
+    html[data-device="mobile"] .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    html[data-device="mobile"] .cost-grid { grid-template-columns:1fr; }
+    html[data-device="mobile"] .modal-form-grid, html[data-device="mobile"] .recommendation-metrics { grid-template-columns:1fr; }
+    html[data-device="mobile"] .actions { justify-content:flex-start; width:100%; }
+    </style>
 </head>
 <body>
   <div class="shell">
     <header class="header">
       <div class="header-copy">
-        <span class="kicker">Planificación de vivienda · España</span>
-        <h1>Simulador de hipoteca</h1>
-        <p>Calcula la cuota, los intereses y el saldo pendiente año a año con el sistema francés, habitual en las hipotecas españolas.</p>
+        <h1>{{ t('loans.title') }}</h1>
+        <p>{{ t('loans.subtitle') }}</p>
       </div>
       <div class="actions">
-        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
-        <a class="btn btn-icon" href="." aria-label="Volver al dashboard"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">Dashboard</span></a>
-        <a class="btn btn-icon" href="expenses/history" aria-label="Movimientos"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span><span class="icon-label">Movimientos</span></a>
-        <a class="btn btn-icon" href="calendar" aria-label="Calendario"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">Calendario</span></a>
+        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="{{ t('profile.title') }}">{{ (username or '?')[0] | upper }}</button>
+        <a class="btn btn-icon hide-mobile" href="." aria-label="{{ t('nav.back.dashboard') }}"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">{{ t('nav.dashboard') }}</span></a>
+        <a class="btn btn-icon hide-mobile" href="expenses/history" aria-label="{{ t('nav.movements') }}"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span><span class="icon-label">{{ t('nav.movements') }}</span></a>
+        <a class="btn btn-icon hide-mobile" href="calendar" aria-label="{{ t('nav.calendar') }}"><span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">{{ t('nav.calendar') }}</span></a>
       </div>
     </header>
 
     <main class="layout">
       <section class="card" aria-labelledby="inputs-title">
         <div class="card-head">
-          <div><h2 id="inputs-title">Datos de la compra</h2><p>Valores orientativos. Modifica cualquier campo para comparar escenarios.</p></div>
+          <div><h2 id="inputs-title">{{ t('loans.inputs.title') }}</h2><p>{{ t('loans.inputs.subtitle') }}</p></div>
           <span class="tag">EUR</span>
         </div>
         <div class="form-grid">
-          <div class="field"><label for="property-price">Precio de la vivienda</label><div class="input-unit"><input id="property-price" type="number" min="0" step="1000" value="250000"><span>€</span></div></div>
-          <div class="field"><label for="down-payment">Aportación inicial total</label><div class="input-unit"><input id="down-payment" type="number" min="0" step="1000" value="50000"><span>€</span></div><small id="contribution-note">Primero se descuentan los gastos de compra; el resto reduce el precio financiado.</small></div>
-          <div class="field"><label for="purchase-costs">Gastos de compra</label><div class="input-unit"><input id="purchase-costs" type="number" min="0" max="30" step="0.5" value="10"><span>%</span></div><small>ITP o IVA/AJD, notaría, registro y otros.</small></div>
+          <div class="field"><label for="property-price">{{ t('loans.field.price') }}</label><div class="input-unit"><input id="property-price" type="number" min="0" step="1000" value="250000"><span>€</span></div></div>
+          <div class="field"><label for="down-payment">{{ t('loans.field.down') }}</label><div class="input-unit"><input id="down-payment" type="number" min="0" step="1000" value="50000"><span>€</span></div><small id="contribution-note">{{ t('loans.contribution.note') }}</small></div>
+          <div class="field"><label for="purchase-costs">{{ t('loans.field.costs') }}</label><div class="input-unit"><input id="purchase-costs" type="number" min="0" max="30" step="0.5" value="10"><span>%</span></div><small>{{ t('loans.costs.note') }}</small></div>
           <div class="form-divider"></div>
-          <div class="field"><label for="term-years">Plazo</label><div class="input-unit"><input id="term-years" type="number" min="1" max="40" step="1" value="30"><span>años</span></div></div>
-          <div class="field"><label for="interest-rate">Tipo de interés (TIN)</label><div class="input-unit"><input id="interest-rate" type="number" min="0" max="20" step="0.01" value="3.25"><span>%</span></div><small>Para una variable, introduce un tipo medio estimado.</small></div>
-          <div class="field"><label for="opening-fee">Comisión de apertura</label><div class="input-unit"><input id="opening-fee" type="number" min="0" max="5" step="0.05" value="0.5"><span>%</span></div></div>
-          <div class="field"><label for="monthly-extra">Coste extra mensual</label><div class="input-unit"><input id="monthly-extra" type="number" min="0" step="5" value="0"><span>€/mes</span></div><small>Seguro, productos vinculados u otros.</small></div>
+          <div class="field"><label for="term-years">{{ t('loans.field.term') }}</label><div class="input-unit"><input id="term-years" type="number" min="1" max="40" step="1" value="30"><span>{{ t('loans.unit.years') }}</span></div></div>
+          <div class="field"><label for="interest-rate">{{ t('loans.field.rate') }}</label><div class="input-unit"><input id="interest-rate" type="number" min="0" max="20" step="0.01" value="3.25"><span>%</span></div><small>{{ t('loans.rate.note') }}</small></div>
+          <div class="field"><label for="opening-fee">{{ t('loans.field.opening') }}</label><div class="input-unit"><input id="opening-fee" type="number" min="0" max="5" step="0.05" value="0.5"><span>%</span></div></div>
+          <div class="field"><label for="monthly-extra">{{ t('loans.field.extra') }}</label><div class="input-unit"><input id="monthly-extra" type="number" min="0" step="5" value="0"><span>{{ t('loans.unit.month') }}</span></div><small>{{ t('loans.extra.note') }}</small></div>
         </div>
-        <div class="assumption"><span aria-hidden="true">ⓘ</span><div><strong>Referencia española:</strong> el 80% de financiación suele ser un límite habitual para vivienda habitual y el 70% para segunda residencia. Los gastos de compra normalmente no se financian.</div></div>
+        <div class="assumption"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></span><div><strong>{{ t('loans.assumption') }}</strong> {{ t('loans.assumption.body') }}</div></div>
         <div class="tool-actions">
-          <button class="btn btn-primary" id="open-recommendations" type="button">💡 Recomendaciones</button>
-          <button class="btn" id="open-save" type="button">♡ Guardar hipoteca</button>
-          <button class="btn" id="open-survey" type="button">✎ Editar encuesta</button>
+          <button class="btn btn-primary" id="open-recommendations" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"></path></svg> {{ t('loans.btn.recommendations') }}</button>
+          <button class="btn" id="open-save" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"></path></svg> {{ t('loans.btn.save') }}</button>
+          <button class="btn" id="open-survey" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg> {{ t('loans.btn.survey') }}</button>
         </div>
       </section>
 
       <section class="results" aria-live="polite">
         <div class="summary-grid">
-          <div class="metric primary"><div class="metric-label">Cuota hipotecaria</div><div class="metric-value" id="monthly-payment">—</div><div class="metric-sub" id="monthly-payment-sub">sin extras mensuales</div></div>
-          <div class="metric"><div class="metric-label">Importe del préstamo</div><div class="metric-value" id="loan-amount">—</div><div class="metric-sub">capital inicial</div></div>
-          <div class="metric"><div class="metric-label">Intereses totales</div><div class="metric-value" id="total-interest">—</div><div class="metric-sub">por toda la vida del préstamo</div></div>
-          <div class="metric"><div class="metric-label">Efectivo inicial</div><div class="metric-value" id="upfront-cash">—</div><div class="metric-sub">aportación total + apertura</div></div>
+          <div class="metric primary"><div class="metric-label">{{ t('loans.metric.payment') }}</div><div class="metric-value" id="monthly-payment">—</div><div class="metric-sub" id="monthly-payment-sub">{{ t('loans.metric.payment.sub') }}</div></div>
+          <div class="metric"><div class="metric-label">{{ t('loans.metric.loan') }}</div><div class="metric-value" id="loan-amount">—</div><div class="metric-sub">{{ t('loans.metric.loan.sub') }}</div></div>
+          <div class="metric"><div class="metric-label">{{ t('loans.metric.interest') }}</div><div class="metric-value" id="total-interest">—</div><div class="metric-sub">{{ t('loans.metric.interest.sub') }}</div></div>
+          <div class="metric"><div class="metric-label">{{ t('loans.metric.cash') }}</div><div class="metric-value" id="upfront-cash">—</div><div class="metric-sub">{{ t('loans.metric.cash.sub') }}</div></div>
         </div>
 
         <div class="card cost-grid">
           <div>
-            <div class="card-head"><div><h2>Coste acumulado</h2><p>Incluye capital, intereses, comisión y extras mensuales.</p></div></div>
+            <div class="card-head"><div><h2>{{ t('loans.cost.title') }}</h2><p>{{ t('loans.cost.subtitle') }}</p></div></div>
             <div class="breakdown">
-              <div class="breakdown-row"><span>Capital devuelto</span><strong id="breakdown-principal">—</strong></div>
-              <div class="breakdown-row"><span>Entrada aplicada al precio</span><strong id="breakdown-down-payment">—</strong></div>
-              <div class="breakdown-row"><span>Gastos de compra</span><strong id="breakdown-purchase-costs">—</strong></div>
-              <div class="breakdown-row"><span>Intereses</span><strong id="breakdown-interest">—</strong></div>
-              <div class="breakdown-row"><span>Comisión de apertura</span><strong id="breakdown-fee">—</strong></div>
-              <div class="breakdown-row"><span>Extras mensuales</span><strong id="breakdown-extra">—</strong></div>
-              <div class="breakdown-row"><span>Total préstamo</span><strong id="breakdown-loan-total">—</strong></div>
-              <div class="breakdown-row"><span>Total con compra y entrada</span><strong id="breakdown-home-total">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.principal') }}</span><strong id="breakdown-principal">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.down') }}</span><strong id="breakdown-down-payment">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.costs') }}</span><strong id="breakdown-purchase-costs">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.interest') }}</span><strong id="breakdown-interest">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.fee') }}</span><strong id="breakdown-fee">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.extra') }}</span><strong id="breakdown-extra">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.loan.total') }}</span><strong id="breakdown-loan-total">—</strong></div>
+              <div class="breakdown-row"><span>{{ t('loans.breakdown.home.total') }}</span><strong id="breakdown-home-total">—</strong></div>
             </div>
           </div>
           <div>
-            <div class="card-head"><div><h2>Capital frente a intereses</h2><p>Distribución de las cuotas por año.</p></div></div>
+            <div class="card-head"><div><h2>{{ t('loans.bars.title') }}</h2><p>{{ t('loans.bars.subtitle') }}</p></div></div>
             <div class="bar-list" id="year-bars"></div>
-            <div class="legend"><span><i class="principal"></i>Capital</span><span><i class="interest"></i>Intereses</span></div>
+            <div class="legend"><span><i class="principal"></i>{{ t('loans.legend.principal') }}</span><span><i class="interest"></i>{{ t('loans.legend.interest') }}</span></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-head"><div><h2>Amortización anual</h2><p>El saldo pendiente se calcula al cierre de cada año.</p></div><span class="tag" id="schedule-rate">TIN 3,25%</span></div>
-          <div class="table-wrap"><table><thead><tr><th>Año</th><th>Cuotas</th><th>Capital amortizado</th><th>Intereses</th><th>Saldo pendiente</th><th>Interés acumulado</th></tr></thead><tbody id="schedule-body"></tbody></table></div>
+          <div class="card-head"><div><h2>{{ t('loans.schedule.title') }}</h2><p>{{ t('loans.schedule.subtitle') }}</p></div><span class="tag" id="schedule-rate">TIN 3,25%</span></div>
+          <div class="table-wrap"><table><thead><tr><th>{{ t('loans.col.year') }}</th><th>{{ t('loans.col.payments') }}</th><th>{{ t('loans.col.principal') }}</th><th>{{ t('loans.col.interest') }}</th><th>{{ t('loans.col.balance') }}</th><th>{{ t('loans.col.cum.interest') }}</th></tr></thead><tbody id="schedule-body"></tbody></table></div>
         </div>
-        <p class="disclaimer">Esta simulación es informativa y no constituye una oferta bancaria. El tipo real, la TAE, la tasación, la solvencia, los seguros, las bonificaciones y la fiscalidad pueden cambiar el resultado. En España, los impuestos y gastos de compra dependen de la comunidad autónoma y de si la vivienda es nueva o usada.</p>
+        <p class="disclaimer">{{ t('loans.disclaimer') }}</p>
       </section>
     </main>
 
     <section class="card saved-section" aria-labelledby="saved-title">
-      <div class="card-head"><div><h2 id="saved-title">Hipotecas guardadas</h2><p>Conserva escenarios para compararlos o recuperarlos más adelante.</p></div></div>
+      <div class="card-head"><div><h2 id="saved-title">{{ t('loans.saved.title') }}</h2><p>{{ t('loans.saved.subtitle') }}</p></div></div>
       <div class="saved-list" id="saved-list"></div>
     </section>
   </div>
 
+  <nav class="mobilenav" aria-label="{{ t('apps.title') }}">
+    <a class="mobilenav-item" href="./">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>{{ t('nav.dashboard') }}</span>
+    </a>
+    <a class="mobilenav-item" href="expenses/history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span>{{ t('nav.movements') }}</span>
+    </a>
+    <a class="mobilenav-item" href="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>{{ t('nav.calendar') }}</span>
+    </a>
+    <a class="mobilenav-item active" href="loans" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg>
+      <span>{{ t('nav.mortgage') }}</span>
+    </a>
+    <button class="mobilenav-item" type="button" data-apps-trigger>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+      <span>{{ t('apps.title') }}</span>
+    </button>
+  </nav>
+
   <div class="overlay{% if not profile_exists %} open{% endif %}" id="survey-overlay" role="dialog" aria-modal="true" aria-labelledby="survey-title">
     <div class="modal">
-      <div class="modal-head"><div><h2 id="survey-title">Conozcamos tu situación</h2><p>Usaremos estos datos para orientar el plazo, la cuota prudente y cuándo puede interesar amortizar.</p></div><button class="btn close-modal" type="button" data-close="survey-overlay" aria-label="Cerrar">×</button></div>
+      <div class="modal-head"><div><h2 id="survey-title">{{ t('loans.survey.title') }}</h2><p>{{ t('loans.survey.subtitle') }}</p></div><button class="btn close-modal" type="button" data-close="survey-overlay" aria-label="{{ t('apps.close') }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
       <form class="modal-form" id="survey-form">
         <div class="modal-form-grid">
-          <div class="field"><label for="profile-age">Edad</label><input id="profile-age" name="age" type="number" min="18" max="100" required value="35"></div>
-          <div class="field"><label for="profile-employment">Situación laboral</label><select id="profile-employment" name="employment_status" required><option value="permanent">Contrato indefinido</option><option value="civil_servant">Funcionario/a</option><option value="temporary">Contrato temporal</option><option value="self_employed">Autónomo/a</option><option value="retired">Jubilado/a</option><option value="unemployed">Desempleado/a</option></select></div>
-          <div class="field"><label for="profile-income">Ingresos netos mensuales</label><div class="input-unit"><input id="profile-income" name="monthly_net_income" type="number" min="0" step="50" required value="3000"><span>€</span></div></div>
-          <div class="field"><label for="profile-expenses">Gastos fijos mensuales</label><div class="input-unit"><input id="profile-expenses" name="monthly_fixed_expenses" type="number" min="0" step="50" required value="1000"><span>€</span></div><small>Sin contar otras cuotas de deuda.</small></div>
-          <div class="field"><label for="profile-debts">Otras deudas mensuales</label><div class="input-unit"><input id="profile-debts" name="monthly_debt_payments" type="number" min="0" step="25" required value="0"><span>€</span></div></div>
-          <div class="field"><label for="profile-savings">Ahorros actuales</label><div class="input-unit"><input id="profile-savings" name="savings" type="number" min="0" step="500" required value="60000"><span>€</span></div></div>
-          <div class="field"><label for="profile-dependents">Personas dependientes</label><input id="profile-dependents" name="dependents" type="number" min="0" max="20" step="1" required value="0"></div>
-          <div class="field"><label for="profile-property-use">Uso de la vivienda</label><select id="profile-property-use" name="property_use" required><option value="primary">Vivienda habitual</option><option value="second">Segunda residencia</option><option value="investment">Inversión / alquiler</option></select></div>
+          <div class="field"><label for="profile-age">{{ t('loans.survey.age') }}</label><input id="profile-age" name="age" type="number" min="18" max="100" required value="35"></div>
+          <div class="field"><label for="profile-employment">{{ t('loans.survey.employment') }}</label><select id="profile-employment" name="employment_status" required><option value="permanent">{{ t('loans.survey.employment.permanent') }}</option><option value="civil_servant">{{ t('loans.survey.employment.civil') }}</option><option value="temporary">{{ t('loans.survey.employment.temporary') }}</option><option value="self_employed">{{ t('loans.survey.employment.self') }}</option><option value="retired">{{ t('loans.survey.employment.retired') }}</option><option value="unemployed">{{ t('loans.survey.employment.unemployed') }}</option></select></div>
+          <div class="field"><label for="profile-income">{{ t('loans.survey.income') }}</label><div class="input-unit"><input id="profile-income" name="monthly_net_income" type="number" min="0" step="50" required value="3000"><span>€</span></div></div>
+          <div class="field"><label for="profile-expenses">{{ t('loans.survey.expenses') }}</label><div class="input-unit"><input id="profile-expenses" name="monthly_fixed_expenses" type="number" min="0" step="50" required value="1000"><span>€</span></div><small>{{ t('loans.survey.expenses.note') }}</small></div>
+          <div class="field"><label for="profile-debts">{{ t('loans.survey.debts') }}</label><div class="input-unit"><input id="profile-debts" name="monthly_debt_payments" type="number" min="0" step="25" required value="0"><span>€</span></div></div>
+          <div class="field"><label for="profile-savings">{{ t('loans.survey.savings') }}</label><div class="input-unit"><input id="profile-savings" name="savings" type="number" min="0" step="500" required value="60000"><span>€</span></div></div>
+          <div class="field"><label for="profile-dependents">{{ t('loans.survey.dependents') }}</label><input id="profile-dependents" name="dependents" type="number" min="0" max="20" step="1" required value="0"></div>
+          <div class="field"><label for="profile-property-use">{{ t('loans.survey.use') }}</label><select id="profile-property-use" name="property_use" required><option value="primary">{{ t('loans.survey.use.primary') }}</option><option value="second">{{ t('loans.survey.use.second') }}</option><option value="investment">{{ t('loans.survey.use.investment') }}</option></select></div>
         </div>
-        <p class="help">Los gastos fijos deben incluir tu coste de vida mensual actual, sin sumar las cuotas de otras deudas. No guardamos datos bancarios ni conectamos con ninguna entidad.</p>
+        <p class="help">{{ t('loans.survey.help') }}</p>
         <div class="form-error" id="survey-error"></div>
-        <div class="modal-actions"><button class="btn btn-primary" type="submit">Guardar perfil</button></div>
+        <div class="modal-actions"><button class="btn btn-primary" type="submit">{{ t('loans.survey.save') }}</button></div>
       </form>
     </div>
   </div>
 
   <div class="overlay" id="recommendations-overlay" role="dialog" aria-modal="true" aria-labelledby="recommendations-title">
     <div class="modal">
-      <div class="modal-head"><div><h2 id="recommendations-title">Recomendaciones para esta hipoteca</h2><p>Se calculan con la hipoteca seleccionada y tu perfil financiero.</p></div><button class="btn close-modal" type="button" data-close="recommendations-overlay" aria-label="Cerrar">×</button></div>
-      <div id="recommendation-content"><p class="help">Pulsa el botón de recomendaciones para analizar esta simulación.</p></div>
+      <div class="modal-head"><div><h2 id="recommendations-title">{{ t('loans.rec.title') }}</h2><p>{{ t('loans.rec.subtitle') }}</p></div><button class="btn close-modal" type="button" data-close="recommendations-overlay" aria-label="{{ t('apps.close') }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
+      <div id="recommendation-content"><p class="help">{{ t('loans.rec.prompt') }}</p></div>
       <div class="modal-actions"></div>
     </div>
   </div>
 
   <div class="overlay" id="save-overlay" role="dialog" aria-modal="true" aria-labelledby="save-title">
     <div class="modal">
-      <div class="modal-head"><div><h2 id="save-title">Guardar hipoteca</h2><p>Podrás recuperarla desde el historial de escenarios.</p></div><button class="btn close-modal" type="button" data-close="save-overlay" aria-label="Cerrar">×</button></div>
-      <form class="modal-form" id="save-form"><div class="field"><label for="saved-name">Nombre del escenario</label><input id="saved-name" name="name" type="text" maxlength="120" required value="Mi hipoteca"></div><div class="form-error" id="save-error"></div><div class="modal-actions"><button class="btn btn-primary" type="submit">Guardar</button></div></form>
+      <div class="modal-head"><div><h2 id="save-title">{{ t('loans.save.title') }}</h2><p>{{ t('loans.save.subtitle') }}</p></div><button class="btn close-modal" type="button" data-close="save-overlay" aria-label="{{ t('apps.close') }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
+      <form class="modal-form" id="save-form"><div class="field"><label for="saved-name">{{ t('loans.save.name') }}</label><input id="saved-name" name="name" type="text" maxlength="120" required value="{{ t('loans.save.name.default') }}"></div><div class="form-error" id="save-error"></div><div class="modal-actions"><button class="btn btn-primary" type="submit">{{ t('loans.save.btn') }}</button></div></form>
     </div>
   </div>
 
   <script>
     (() => {
+      const I18N = {{ i18n_dict(language) | tojson }};
+      const t = (key, vars = {}) => {
+        let s = I18N[key] ?? key;
+        for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+        return s;
+      };
       const ids = ['property-price','down-payment','purchase-costs','term-years','interest-rate','opening-fee','monthly-extra'];
       const $ = (id) => document.getElementById(id);
       const euro = new Intl.NumberFormat('es-ES', { style:'currency', currency:'EUR', maximumFractionDigits:2 });
@@ -337,8 +347,8 @@
         const homeTotal = upfront + totalBasePayments + extraTotal;
         const monthlyOutlay = basePayment + monthlyExtra;
 
-        $('monthly-payment').textContent = money(monthlyOutlay) + '/mes';
-        $('monthly-payment-sub').textContent = monthlyExtra > 0 ? money(basePayment) + ' de hipoteca + ' + money(monthlyExtra) + ' extras' : 'cuota de capital + intereses';
+        $('monthly-payment').textContent = money(monthlyOutlay) + t('loans.payment.per.month');
+        $('monthly-payment-sub').textContent = monthlyExtra > 0 ? t('loans.payment.sub.extra', { base: money(basePayment), extra: money(monthlyExtra) }) : t('loans.payment.sub.base');
         $('loan-amount').textContent = money(principal);
         $('total-interest').textContent = money(totalInterest);
         $('upfront-cash').textContent = money(upfront);
@@ -347,13 +357,13 @@
         $('breakdown-purchase-costs').textContent = money(purchaseCosts);
         $('breakdown-interest').textContent = money(totalInterest);
         $('contribution-note').textContent = initialContribution < purchaseCosts
-          ? 'La aportación no cubre todos los gastos de compra; el precio se reduce en 0 €.'
-          : 'Se descuentan ' + money(purchaseCosts) + ' de gastos; ' + money(propertyDownPayment) + ' reduce el precio financiado.';
+          ? t('loans.contribution.short')
+          : t('loans.contribution.full', { costs: money(purchaseCosts), down: money(propertyDownPayment) });
         $('breakdown-fee').textContent = money(openingFee);
         $('breakdown-extra').textContent = money(extraTotal);
         $('breakdown-loan-total').textContent = money(loanTotal);
         $('breakdown-home-total').textContent = money(homeTotal);
-        $('schedule-rate').textContent = 'TIN ' + pct(annualRate) + '% · ' + years + ' años';
+        $('schedule-rate').textContent = t('loans.schedule.rate.full', { rate: pct(annualRate), years: years });
 
         const maxYearTotal = Math.max(...schedule.map(row => row.capital + row.interest), 1);
         const bars = $('year-bars');
@@ -361,8 +371,8 @@
         schedule.forEach((row) => {
           const wrapper = document.createElement('div');
           wrapper.className = 'bar-row';
-          const label = document.createElement('span'); label.className = 'bar-label'; label.textContent = 'Año ' + row.year;
-          const track = document.createElement('div'); track.className = 'bar-track'; track.title = money(row.capital) + ' capital · ' + money(row.interest) + ' intereses';
+          const label = document.createElement('span'); label.className = 'bar-label'; label.textContent = t('loans.year.label', { year: row.year });
+          const track = document.createElement('div'); track.className = 'bar-track'; track.title = t('loans.tooltip', { capital: money(row.capital), interest: money(row.interest) });
           const capitalBar = document.createElement('div'); capitalBar.className = 'bar-fill principal'; capitalBar.style.width = (row.capital / maxYearTotal * 100) + '%';
           const interestBar = document.createElement('div'); interestBar.className = 'bar-fill interest'; interestBar.style.width = (row.interest / maxYearTotal * 100) + '%';
           track.append(capitalBar, interestBar);
@@ -383,7 +393,7 @@
         const list = $('saved-list');
         list.innerHTML = '';
         if (!savedScenarios.length) {
-          list.innerHTML = '<p class="empty-saved">Todavía no has guardado ninguna simulación.</p>';
+          list.innerHTML = '<p class="empty-saved">' + t('loans.saved.empty') + '</p>';
           return;
         }
         savedScenarios.forEach((scenario) => {
@@ -394,9 +404,9 @@
           const date = document.createElement('span'); date.className = 'tag'; date.textContent = scenario.created_at || '';
           head.append(name, date);
           const meta = document.createElement('div'); meta.className = 'saved-item-meta';
-          meta.textContent = money(scenario.property_price) + ' · ' + scenario.term_years + ' años · TIN ' + pct(scenario.interest_rate) + '%';
+          meta.textContent = money(scenario.property_price) + ' · ' + t('loans.meta.years', { years: scenario.term_years }) + ' · TIN ' + pct(scenario.interest_rate) + '%';
           const actions = document.createElement('div'); actions.className = 'saved-item-actions';
-          const restore = document.createElement('button'); restore.className = 'btn'; restore.type = 'button'; restore.textContent = 'Recuperar';
+          const restore = document.createElement('button'); restore.className = 'btn'; restore.type = 'button'; restore.textContent = t('loans.saved.restore');
           restore.addEventListener('click', () => {
             $('property-price').value = scenario.property_price;
             $('down-payment').value = scenario.initial_contribution;
@@ -408,7 +418,7 @@
             calculate();
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
-          const remove = document.createElement('button'); remove.className = 'btn'; remove.type = 'button'; remove.textContent = 'Eliminar';
+          const remove = document.createElement('button'); remove.className = 'btn'; remove.type = 'button'; remove.textContent = t('loans.saved.delete');
           remove.addEventListener('click', async () => {
             const response = await fetch('api/mortgage/saved/' + scenario.id + '/delete', { method:'POST' });
             if (response.ok) { savedScenarios = savedScenarios.filter((item) => item.id !== scenario.id); renderSavedScenarios(); }
@@ -423,9 +433,9 @@
         content.innerHTML = '';
         const metricGrid = document.createElement('div'); metricGrid.className = 'recommendation-metrics';
         const metrics = [
-          ['Cuota total', money(data.metrics.monthly_payment)],
-          ['Esfuerzo total', data.metrics.debt_ratio == null ? '—' : pct(data.metrics.debt_ratio) + '%'],
-          ['Plazo orientativo', data.metrics.recommended_years ? data.metrics.recommended_years + ' años' : 'No encaja'],
+          [t('loans.rec.metric.total'), money(data.metrics.monthly_payment)],
+          [t('loans.rec.metric.effort'), data.metrics.debt_ratio == null ? '—' : pct(data.metrics.debt_ratio) + '%'],
+          [t('loans.rec.metric.term'), data.metrics.recommended_years ? t('loans.rec.term.years', { years: data.metrics.recommended_years }) : t('loans.rec.term.no.fit')],
         ];
         metrics.forEach(([label, value]) => { const box = document.createElement('div'); box.className = 'recommendation-metric'; const strong = document.createElement('strong'); strong.textContent = value; const span = document.createElement('span'); span.textContent = label; box.append(strong, span); metricGrid.appendChild(box); });
         const list = document.createElement('ul'); list.className = 'tips-list';
@@ -436,13 +446,13 @@
 
       async function loadRecommendations() {
         const content = $('recommendation-content');
-        content.innerHTML = '<p class="help">Analizando cuota, esfuerzo mensual, colchón y plazo…</p>';
+        content.innerHTML = '<p class="help">' + t('loans.rec.analyzing') + '</p>';
         const formData = new FormData();
         Object.entries(mortgageData()).forEach(([key, value]) => formData.append(key, value));
         try {
           const response = await fetch('api/mortgage/recommendations', { method:'POST', body:formData });
           const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || 'No se pudieron calcular las recomendaciones.');
+          if (!response.ok) throw new Error(payload.error || t('loans.rec.error'));
           renderRecommendations(payload);
         } catch (error) {
           content.innerHTML = '<p class="form-error"></p>';
@@ -456,7 +466,7 @@
       $('open-survey').addEventListener('click', () => showOverlay('survey-overlay'));
       $('open-save').addEventListener('click', () => showOverlay('save-overlay'));
       $('open-recommendations').addEventListener('click', () => {
-        if (!profileExists) { showOverlay('survey-overlay'); $('survey-error').textContent = 'Completa la encuesta para recibir recomendaciones.'; return; }
+        if (!profileExists) { showOverlay('survey-overlay'); $('survey-error').textContent = t('loans.survey.required'); return; }
         showOverlay('recommendations-overlay'); loadRecommendations();
       });
 
@@ -466,7 +476,7 @@
         try {
           const response = await fetch('api/mortgage/profile', { method:'POST', body:new FormData(event.currentTarget) });
           const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || 'No se pudo guardar el perfil.');
+          if (!response.ok) throw new Error(payload.error || t('loans.survey.save.error'));
           profileExists = true; hideOverlay('survey-overlay');
         } catch (error) { errorEl.textContent = error.message; }
       });
@@ -479,7 +489,7 @@
         try {
           const response = await fetch('api/mortgage/saved', { method:'POST', body:formData });
           const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || 'No se pudo guardar la hipoteca.');
+          if (!response.ok) throw new Error(payload.error || t('loans.save.error'));
           savedScenarios.unshift(payload.saved); renderSavedScenarios(); hideOverlay('save-overlay');
         } catch (error) { errorEl.textContent = error.message; }
       });

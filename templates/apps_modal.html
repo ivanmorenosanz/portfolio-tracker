@@ -17,8 +17,7 @@
   .apps-tile-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .apps-tile-name { font-weight: 700; font-size: .92rem; display: flex; align-items: center; gap: .45rem; }
   .apps-tile-tag { color: var(--muted); font-size: .76rem; margin-top: 1px; }
-  .apps-badge { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--success, #2d7b53); background: color-mix(in oklab, var(--success, #2d7b53) 12%, var(--surface)); border: 1px solid color-mix(in oklab, var(--success, #2d7b53) 30%, transparent); border-radius: 999px; padding: .12rem .45rem; }
-  .apps-tile-arrow { color: var(--muted); font-size: 1.05rem; flex-shrink: 0; }
+  .apps-badge { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--primary, #0f6a63); background: color-mix(in oklab, var(--primary, #0f6a63) 12%, var(--surface)); border: 1px solid color-mix(in oklab, var(--primary, #0f6a63) 30%, transparent); border-radius: 999px; padding: .12rem .45rem; }
   .apps-trigger-fixed { position: fixed; top: 1rem; right: 1rem; z-index: 200; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); backdrop-filter: blur(12px); transition: transform .16s ease; }
   .apps-trigger-fixed:hover { transform: translateY(-1px); }
   @media (max-width: 520px) { .apps-modal { padding: 1rem; } }
@@ -28,10 +27,10 @@
   <div class="apps-modal">
     <div class="apps-head">
       <div>
-        <h2 id="apps-title">{% if language|default('es') == 'en' %}Apps{% else %}Aplicaciones{% endif %}</h2>
-        <p>{% if language|default('es') == 'en' %}All your apps in one place.{% else %}Todas tus aplicaciones en un solo lugar.{% endif %}</p>
+        <h2 id="apps-title">{{ t('apps.title') }}</h2>
+        <p>{{ t('apps.subtitle') }}</p>
       </div>
-      <button class="apps-close" id="apps-close" type="button" aria-label="{% if language|default('es') == 'en' %}Close{% else %}Cerrar{% endif %}">✕</button>
+      <button class="apps-close" id="apps-close" type="button" aria-label="{{ t('apps.close') }}">✕</button>
     </div>
     <div class="apps-grid" id="apps-grid"></div>
   </div>
@@ -41,8 +40,9 @@
   (() => {
     const APPS = {{ apps_list | tojson }};
     const CURRENT = {{ current_app_id | tojson }};
-    const IS_EN = '{{ language|default("es") }}' === 'en';
-    const BADGE = IS_EN ? "You're here" : "Estás aquí";
+    const I18N = {{ i18n_dict(language) | tojson }};
+    const t = (key) => I18N[key] ?? key;
+    const BADGE = t('apps.here');
     const grid = document.getElementById('apps-grid');
     const overlay = document.getElementById('apps-overlay');
 
@@ -58,8 +58,7 @@
       const isCurrent = app.id === CURRENT;
       const badge = isCurrent ? `<span class="apps-badge">${BADGE}</span>` : '';
       const inner = `<span class="apps-tile-icon" style="background:${app.color}">${app.icon}</span>` +
-        `<span class="apps-tile-body"><span class="apps-tile-name">${app.name}${badge}</span><span class="apps-tile-tag">${app.tagline}</span></span>` +
-        (isCurrent ? '' : `<span class="apps-tile-arrow">→</span>`);
+        `<span class="apps-tile-body"><span class="apps-tile-name">${app.name}${badge}</span><span class="apps-tile-tag">${app.tagline}</span></span>`;
       return isCurrent
         ? `<div class="apps-tile current">${inner}</div>`
         : `<a class="apps-tile" href="${appUrl(app)}">${inner}</a>`;

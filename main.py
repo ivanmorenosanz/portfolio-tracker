@@ -51,6 +51,51 @@ app = FastAPI(title="Portfolio Pi", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.get("/health", include_in_schema=False)
+def health_check(request: Request):
+    """Verify Jinja globals are registered — catches stale-code restarts.
+
+    Returns 200 with a summary of registered helpers. Returns 503 if any
+    required global (`device_of`, `t`, `base_path`, etc.) is missing, which
+    means the running process predates a code change that added template
+    helpers. The auto-restart watcher or an external monitoring probe can
+    use this to detect a broken deployment.
+    """
+    from fastapi.responses import JSONResponse
+    from templating import templates
+
+    required: dict[str, str] = {
+        "device_of": "templates.env.globals",
+        "t": "templates.env.globals",
+        "base_path": "templates.env.globals",
+        "apps_list": "templates.env.globals",
+        "current_app_id": "templates.env.globals",
+        "trim_zeros": "templates.env.filters",
+        "i18n_dict": "templates.env.globals",
+    }
+
+    missing: list[str] = []
+    for name, registry_name in required.items():
+        registry = getattr(templates.env, registry_name.split(".")[-1])
+        if name not in registry:
+            missing.append(f"{name} (in {registry_name})")
+
+    if missing:
+        return JSONResponse(
+            {"status": "unhealthy", "missing": missing},
+            status_code=503,
+        )
+
+    # Verify templates directory is readable and dashboard.html exists.
+    dashboard = templates.env.get_template("dashboard.html")
+
+    return JSONResponse({
+        "status": "healthy",
+        "globals": sorted(required.keys()),
+        "templates_loaded": bool(dashboard),
+    })
+
+
 @app.middleware("http")
 async def prefix_redirects(request: Request, call_next):
     """Prepend the reverse-proxy path prefix (e.g. /Portfolio) to redirects.

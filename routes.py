@@ -15,6 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 
 from auth import _require_auth, _safe_redirect_target, current_language, current_username
+from i18n import months as i18n_months, translate as i18n_translate, weekdays as i18n_weekdays, weekdays_mini as i18n_weekdays_mini
 from config import (
     ALLOWED_ATTACHMENT_EXTENSIONS,
     ATTACHMENTS_DIR,
@@ -77,6 +78,7 @@ from services import (
     _get_or_create_cash_holding,
     _period_label,
     _round_money,
+    schedule_concept_name,
     ensure_portfolio_type_snapshots_table,
     record_portfolio_snapshots,
     refresh_prices,
@@ -84,6 +86,9 @@ from services import (
     run_scheduled_expenses,
     run_scheduled_incomes,
     run_scheduled_transfers,
+    schedule_execution_date,
+    schedule_fires_on_date,
+    scheduled_dates_in_month,
     snapshot_data,
 )
 from templating import templates
@@ -498,6 +503,11 @@ def change_profile_password(
     new_password: str = Form(...),
     new_password2: str = Form(...),
 ):
+    """Forward to the shared auth service, which owns the real credentials.
+
+    Portfolio's own users table is only a mirror for FK integrity — writing
+    the hash locally (the old behaviour) would silently change nothing.
+    """
     uid, redir = _require_auth(request)
     if redir:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
@@ -505,12 +515,22 @@ def change_profile_password(
         return JSONResponse({"error": "Las contraseñas nuevas no coinciden."}, status_code=400)
     if len(new_password) < 6:
         return JSONResponse({"error": "La nueva contraseña debe tener al menos 6 caracteres."}, status_code=400)
-    with SessionLocal() as db:
-        user = db.get(User, uid)
-        if not user or not pwd_context.verify(current_password, user.hashed_password):
-            return JSONResponse({"error": "La contraseña actual no es correcta."}, status_code=400)
-        user.hashed_password = pwd_context.hash(new_password)
-        db.commit()
+
+    import requests as _req
+    token = request.cookies.get("app_session", "")
+    auth_url = "http://127.0.0.1:8002/api/auth/password"
+    try:
+        r = _req.post(auth_url, data={
+            "current_password": current_password,
+            "new_password": new_password,
+            "new_password2": new_password2,
+        }, headers={"Cookie": f"app_session={token}"}, timeout=10.0)
+    except Exception as e:
+        return JSONResponse({"error": f"No se pudo contactar al servicio de auth: {e}"}, status_code=502)
+    if r.status_code != 200:
+        try: detail = r.json().get("detail", "Error del servicio de auth.")
+        except Exception: detail = "Error del servicio de auth."
+        return JSONResponse({"error": detail}, status_code=r.status_code)
     return JSONResponse({"ok": True})
 
 
@@ -2066,16 +2086,31 @@ def portfolio_history(
         trades_raw = tq.order_by(Trade.timestamp).all()
 
     # Filter out snapshots outside market hours for market-linked scopes,
-    # but keep full timeline for cash to reflect off-hours flows.
+    # but keep full timeline for cash to reflect off-hours flows. A point taken
+    # after-hours is still kept when its value actually moved vs the last kept
+    # point (e.g. a 24/7 asset like crypto, or a late NAV update), so midnight
+    # price changes show up in the evolution chart instead of being dropped.
     if scope != "cash":
         trade_timestamps = {t.timestamp for t in trades_raw}
+        _SNAP_EPS = 0.005  # same noise threshold used when recording snapshots
 
-        def _keep(s: PortfolioSnapshot) -> bool:
-            if _in_market_hours(_to_madrid(s.timestamp)):
-                return True
-            return any(abs((s.timestamp - tt).total_seconds()) <= 3600 for tt in trade_timestamps)
+        def _keep_evolution(items):
+            kept = []
+            prev_value = None
+            for s in items:
+                value = s.total_value or 0.0
+                in_hours = _in_market_hours(_to_madrid(s.timestamp))
+                near_trade = any(
+                    abs((s.timestamp - tt).total_seconds()) <= 3600
+                    for tt in trade_timestamps
+                )
+                moved = prev_value is None or abs(value - prev_value) >= _SNAP_EPS
+                if in_hours or near_trade or moved:
+                    kept.append(s)
+                    prev_value = value
+            return kept
 
-        snapshots = [s for s in snapshots if _keep(s)]
+        snapshots = _keep_evolution(snapshots)
 
     labels = [_to_madrid(s.timestamp).strftime("%d %b %H:%M") for s in snapshots]
     values = [round(s.total_value, 2) for s in snapshots]
@@ -2594,16 +2629,24 @@ def get_watchlist_prices(request: Request):
 
 
 # ── calendar view ─────────────────────────────────────────────────────────────
-_WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-_MONTHS_ES = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-]
+# Spanish labels remain the canonical fallback; localized lists come from i18n.
+_WEEKDAYS_ES = i18n_weekdays("es")
+_MONTHS_ES = i18n_months("es")
 
 
-def _schedule_fires_on(day_of_month: int, day: int, year: int, month: int) -> bool:
-    last_day = monthrange(year, month)[1]
-    return min(day_of_month, last_day) == day
+def _weekdays_for(lang: str) -> list[str]:
+    return i18n_weekdays(lang)
+
+
+def _months_for(lang: str) -> list[str]:
+    return i18n_months(lang)
+
+
+def _schedule_fires_on(day_of_month: int, day: int, year: int, month: int, concept_name: Optional[str] = None) -> bool:
+    try:
+        return schedule_fires_on_date(day_of_month, date(year, month, day), concept_name)
+    except ValueError:
+        return False
 
 
 def _day_bounds_utc(d: date) -> tuple[datetime, datetime]:
@@ -2747,7 +2790,7 @@ def _fetch_schedules(db, user_id: int):
 def _scheduled_for_day(db, d: date, accounts: dict, expense_schedules, income_schedules, transfer_schedules) -> list[dict]:
     scheduled: list[dict] = []
     for s in expense_schedules:
-        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month):
+        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month, schedule_concept_name(s)):
             scheduled.append({
                 "type": "expense",
                 "name": s.name,
@@ -2758,7 +2801,7 @@ def _scheduled_for_day(db, d: date, accounts: dict, expense_schedules, income_sc
                 "notes": s.notes or "",
             })
     for s in income_schedules:
-        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month):
+        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month, schedule_concept_name(s)):
             scheduled.append({
                 "type": "income",
                 "name": s.name,
@@ -2768,7 +2811,7 @@ def _scheduled_for_day(db, d: date, accounts: dict, expense_schedules, income_sc
                 "notes": s.notes or "",
             })
     for s in transfer_schedules:
-        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month):
+        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month, schedule_concept_name(s)):
             scheduled.append({
                 "type": "transfer",
                 "name": s.notes or "Transferencia",
@@ -2785,10 +2828,10 @@ def _scheduled_net_for_day(expense_schedules, income_schedules, d: date) -> floa
     """Net scheduled cash flow on a day (income minus expense); transfers are neutral."""
     net = 0.0
     for s in expense_schedules:
-        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month):
+        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month, schedule_concept_name(s)):
             net -= s.amount
     for s in income_schedules:
-        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month):
+        if _schedule_fires_on(s.day_of_month, d.day, d.year, d.month, schedule_concept_name(s)):
             net += s.amount
     return net
 
@@ -2858,7 +2901,7 @@ def _project_cash_balances(db, uid: int, start: date, end: date, today: date) ->
     return balances
 
 
-def _build_day_detail(db, uid: int, d: date) -> dict:
+def _build_day_detail(db, uid: int, d: date, lang: str = "es") -> dict:
     start_utc, end_utc = _day_bounds_utc(d)
     accounts = _fetch_accounts(db, uid)
     records = _fetch_records(db, uid, start_utc, end_utc, accounts)
@@ -2867,8 +2910,10 @@ def _build_day_detail(db, uid: int, d: date) -> dict:
     if d > today:
         scheduled = _scheduled_for_day(db, d, accounts, *_fetch_schedules(db, uid))
     balances = _project_cash_balances(db, uid, d, d, today)
+    wd = _weekdays_for(lang)
+    mo = _months_for(lang)
     return {
-        "label": f"{_WEEKDAYS_ES[d.weekday()]} {d.day} {_MONTHS_ES[d.month - 1]} {d.year}",
+        "label": f"{wd[d.weekday()]} {d.day} {mo[d.month - 1]} {d.year}",
         "records": records,
         "scheduled": scheduled,
         "totals": {
@@ -2879,7 +2924,7 @@ def _build_day_detail(db, uid: int, d: date) -> dict:
     }
 
 
-def _calendar_month_context(db, uid: int, year: int, month: int, today: date) -> dict:
+def _calendar_month_context(db, uid: int, year: int, month: int, today: date, lang: str = "es") -> dict:
     start_utc, end_utc = _month_bounds_utc(year, month)
     accounts = _fetch_accounts(db, uid)
     records = _fetch_records(db, uid, start_utc, end_utc, accounts)
@@ -2903,9 +2948,10 @@ def _calendar_month_context(db, uid: int, year: int, month: int, today: date) ->
     scheduled_days: set[str] = set()
     for schedules in (expense_schedules, income_schedules, transfer_schedules):
         for s in schedules:
-            fire_date = datetime(year, month, min(s.day_of_month, last_day)).date()
-            if fire_date > today:
-                scheduled_days.add(fire_date.isoformat())
+            concept_name = schedule_concept_name(s)
+            for fire_date in scheduled_dates_in_month(s.day_of_month, year, month, concept_name):
+                if fire_date > today:
+                    scheduled_days.add(fire_date.isoformat())
 
     first = datetime(year, month, 1)
     offset = first.weekday()  # Monday = 0
@@ -2947,15 +2993,16 @@ def _calendar_month_context(db, uid: int, year: int, month: int, today: date) ->
     else:
         next_date = datetime(year, month + 1, 1).date().isoformat()
 
+    mo = _months_for(lang)
     return {
-        "title": f"{_MONTHS_ES[month - 1]} {year}",
+        "title": f"{mo[month - 1]} {year}",
         "weeks": weeks,
         "prev_date": prev_date,
         "next_date": next_date,
     }
 
 
-def _calendar_week_context(db, uid: int, anchor: date, today: date) -> dict:
+def _calendar_week_context(db, uid: int, anchor: date, today: date, lang: str = "es") -> dict:
     monday = anchor - timedelta(days=anchor.weekday())
     days = [monday + timedelta(days=i) for i in range(7)]
     start_utc, _ = _day_bounds_utc(days[0])
@@ -2970,6 +3017,7 @@ def _calendar_week_context(db, uid: int, anchor: date, today: date) -> dict:
 
     balances = _project_cash_balances(db, uid, days[0], days[-1], today)
 
+    wd = _weekdays_for(lang)
     week_days = []
     for d in days:
         iso = d.isoformat()
@@ -2980,7 +3028,7 @@ def _calendar_week_context(db, uid: int, anchor: date, today: date) -> dict:
         week_days.append({
             "date": iso,
             "day": d.day,
-            "weekday": _WEEKDAYS_ES[d.weekday()],
+            "weekday": wd[d.weekday()],
             "is_today": d == today,
             "is_future": d > today,
             "spent": sum(r["amount"] for r in day_records if r["type"] == "expense"),
@@ -2992,7 +3040,9 @@ def _calendar_week_context(db, uid: int, anchor: date, today: date) -> dict:
         })
 
     first, last = days[0], days[-1]
-    title = f"Semana {monday.isocalendar().week} · {first.day} {_MONTHS_ES[first.month - 1]} – {last.day} {_MONTHS_ES[last.month - 1]} {last.year}"
+    mo = _months_for(lang)
+    week_label = i18n_translate("cal.week.label", lang)
+    title = f"{week_label} {monday.isocalendar().week} · {first.day} {mo[first.month - 1]} – {last.day} {mo[last.month - 1]} {last.year}"
     return {
         "title": title,
         "week_days": week_days,
@@ -3001,7 +3051,7 @@ def _calendar_week_context(db, uid: int, anchor: date, today: date) -> dict:
     }
 
 
-def _calendar_year_context(db, uid: int, year: int, today: date) -> dict:
+def _calendar_year_context(db, uid: int, year: int, today: date, lang: str = "es") -> dict:
     start_utc, end_utc = _year_bounds_utc(year)
     accounts = _fetch_accounts(db, uid)
     records = _fetch_records(db, uid, start_utc, end_utc, accounts)
@@ -3024,10 +3074,11 @@ def _calendar_year_context(db, uid: int, year: int, today: date) -> dict:
     scheduled_days: set[str] = set()
     for schedules in (expense_schedules, income_schedules, transfer_schedules):
         for s in schedules:
+            concept_name = schedule_concept_name(s)
             for m in range(1, 13):
-                fire_date = datetime(year, m, min(s.day_of_month, monthrange(year, m)[1])).date()
-                if fire_date > today:
-                    scheduled_days.add(fire_date.isoformat())
+                for fire_date in scheduled_dates_in_month(s.day_of_month, year, m, concept_name):
+                    if fire_date > today:
+                        scheduled_days.add(fire_date.isoformat())
 
     balances = _project_cash_balances(db, uid, date(year, 1, 1), date(year, 12, 31), today)
 
@@ -3056,9 +3107,10 @@ def _calendar_year_context(db, uid: int, year: int, today: date) -> dict:
                 "balance": balances.get(iso),
             })
         weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
+        mo = _months_for(lang)
         months.append({
             "number": m,
-            "name": _MONTHS_ES[m - 1],
+            "name": mo[m - 1],
             "month_anchor": f"{year:04d}-{m:02d}-01",
             "weeks": weeks,
         })
@@ -3071,8 +3123,8 @@ def _calendar_year_context(db, uid: int, year: int, today: date) -> dict:
     }
 
 
-def _calendar_day_context(db, uid: int, anchor: date, today: date) -> dict:
-    detail = _build_day_detail(db, uid, anchor)
+def _calendar_day_context(db, uid: int, anchor: date, today: date, lang: str = "es") -> dict:
+    detail = _build_day_detail(db, uid, anchor, lang)
     return {
         "title": detail["label"],
         "day_records": detail["records"],
@@ -3096,6 +3148,7 @@ def calendar_view(request: Request, view: str = Query("month"), date: Optional[s
     now_madrid = datetime.now(MADRID_TZ)
     today = now_madrid.date()
     anchor = _parse_anchor(date, today)
+    lang = current_language(request)
 
     with SessionLocal() as db:
         accounts = [
@@ -3103,13 +3156,13 @@ def calendar_view(request: Request, view: str = Query("month"), date: Optional[s
             for a in db.query(Account).filter(Account.user_id == uid).order_by(Account.name).all()
         ]
         if view == "month":
-            ctx = _calendar_month_context(db, uid, anchor.year, anchor.month, today)
+            ctx = _calendar_month_context(db, uid, anchor.year, anchor.month, today, lang)
         elif view == "week":
-            ctx = _calendar_week_context(db, uid, anchor, today)
+            ctx = _calendar_week_context(db, uid, anchor, today, lang)
         elif view == "year":
-            ctx = _calendar_year_context(db, uid, anchor.year, today)
+            ctx = _calendar_year_context(db, uid, anchor.year, today, lang)
         else:
-            ctx = _calendar_day_context(db, uid, anchor, today)
+            ctx = _calendar_day_context(db, uid, anchor, today, lang)
 
     server_records = []
     if view == "week":
@@ -3121,11 +3174,12 @@ def calendar_view(request: Request, view: str = Query("month"), date: Optional[s
     ctx.update({
         "request": request,
         "username": current_username(request),
-        "language": current_language(request),
+        "language": lang,
         "view": view,
         "anchor": anchor.isoformat(),
         "today": today.isoformat(),
-        "weekdays": _WEEKDAYS_ES,
+        "weekdays": _weekdays_for(lang),
+        "weekdays_mini": i18n_weekdays_mini(lang),
         "default_currency_sym": _sym(DEFAULT_CURRENCY),
         "accounts": accounts,
         "expense_categories": _EXPENSE_CATEGORY_NAMES,
@@ -3144,10 +3198,10 @@ def calendar_day(request: Request, date: str = Query(..., min_length=10, max_len
     try:
         d = datetime.strptime(date, "%Y-%m-%d").date()
     except ValueError:
-        return JSONResponse({"error": "Fecha inválida"}, status_code=400)
+        return JSONResponse({"error": i18n_translate("cal.invalid.date", current_language(request))}, status_code=400)
 
     with SessionLocal() as db:
-        detail = _build_day_detail(db, uid, d)
+        detail = _build_day_detail(db, uid, d, current_language(request))
     return JSONResponse({"date": d.isoformat(), **detail})
 
 

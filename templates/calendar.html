@@ -1,91 +1,40 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}">
+<html lang="{{ language|default('es') }}" data-device="{{ device_of(request) }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="{{ base_path(request) }}/">
-  <title>Calendario</title>
+  <title>{{ t('cal.title') }}</title>
   <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="apple-touch-icon" href="static/favicon.svg">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #f4efe8; --bg-accent: #efe4d6; --surface: rgba(255,255,255,.84); --surface-2: rgba(255,255,255,.58);
-      --border: rgba(28,35,34,.10); --text: #171b1a; --muted: #66706b;
-      --primary: #0f6a63; --danger: #b54848; --success: #2f7d42; --accent: #c9792b;
-      --radius: 1.15rem; --shadow: 0 24px 60px rgba(42,42,32,.08); --shadow-soft: 0 8px 24px rgba(42,42,32,.06);
-      color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1313; --bg-accent: #16201d; --surface: rgba(24,30,29,.84); --surface-2: rgba(34,42,40,.72);
-        --border: rgba(255,255,255,.08); --text: #eef1ed; --muted: #9aa7a0;
-        --primary: #6eb7ac; --danger: #ea7b7b; --success: #73bf8b; --accent: #e2a15f;
-        --shadow: 0 24px 60px rgba(0,0,0,.28); --shadow-soft: 0 8px 24px rgba(0,0,0,.18);
-        color-scheme: dark;
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Satoshi','Inter',system-ui,sans-serif; color: var(--text); line-height: 1.6;
-      background:
-        radial-gradient(circle at top left, color-mix(in oklab, var(--bg-accent) 90%, white) 0, transparent 30%),
-        radial-gradient(circle at 100% 0, color-mix(in oklab, var(--primary) 12%, transparent) 0, transparent 32%),
-        linear-gradient(180deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 86%, white) 100%);
-      min-height: 100vh;
-    }
+  <!-- Compiled by _shared/tailwind/build.sh -->
+  <link rel="stylesheet" href="static/tailwind.css">
+    <link rel="stylesheet" href="static/app.css">
+    <style>
+    /* calendar-specific layout (shared tokens/components live in static/app.css) */
     a { color: inherit; }
-    .shell { max-width: 1320px; margin: 0 auto; padding: 1.25rem 1.25rem 2rem; }
-    .header {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem;
-      margin-bottom: 1rem; flex-wrap: wrap; border: 1px solid var(--border); border-radius: calc(var(--radius) + .2rem);
-      background: linear-gradient(145deg, color-mix(in oklab, var(--surface) 82%, var(--accent) 18%) 0%, color-mix(in oklab, var(--surface) 92%, var(--primary) 8%) 100%);
-      box-shadow: var(--shadow);
-    }
-    .header h1 { font-size: clamp(1.9rem, 3vw, 2.9rem); font-weight: 700; letter-spacing: -.06em; }
-    .header p { font-size: .92rem; color: var(--muted); margin-top: .25rem; }
-    .actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: .4rem; padding: .72rem 1rem;
-      border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); text-decoration: none;
-      box-shadow: var(--shadow-soft); font-weight: 600; cursor: pointer;
-      transition: transform .16s ease, background .16s ease, border-color .16s ease;
-    }
-    .btn:hover { transform: translateY(-1px); background: color-mix(in oklab, var(--surface-2) 72%, var(--primary) 28%); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
-    .btn:active { transform: translateY(1px); box-shadow: none; }
-    .btn:disabled { opacity: .45; pointer-events: none; }
-    .btn.primary { background: var(--primary); color: #fff; border-color: transparent; }
-    .btn-icon { height: 42px; padding: 0; border-radius: 999px; gap: 0; overflow: hidden; transition: padding .18s ease; }
-    .btn-icon .icon-glyph { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex: 0 0 42px; }
-    .btn-icon .icon-label { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: .85rem; font-weight: 600; transition: max-width .18s ease, opacity .18s ease; }
-    .btn-icon:hover { padding-right: .9rem; transition-delay: .2s; }
-    .btn-icon:focus-visible { padding-right: .9rem; }
-    .btn-icon:hover .icon-label { max-width: 160px; opacity: 1; transition-delay: .2s; }
-    .btn-icon:focus-visible .icon-label { max-width: 160px; opacity: 1; }
-    .user-chip {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 42px; height: 42px; border-radius: 50%;
-      background: color-mix(in oklab, var(--primary) 22%, var(--surface));
-      border: 1px solid var(--border);
-      font-size: .92rem; font-weight: 700; color: var(--primary); cursor: default;
-    }
+    .shell { max-width: 1320px; }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-soft); backdrop-filter: blur(14px); }
+    .header h1 { font-size: clamp(1.9rem, 3vw, 2.9rem); letter-spacing: -.06em; }
+    .actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+    .card { padding: 1.25rem; }
 
     .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .toolbar h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.03em; }
+    .toolbar h2 { font-size: 1.2rem; font-weight: 700; letter-spacing: -.02em; }
     .toolbar .nav-group { display: flex; gap: .4rem; align-items: center; }
 
     .switcher { display: inline-flex; gap: .2rem; padding: .2rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); }
-    .switcher a { padding: .42rem .85rem; border-radius: 999px; text-decoration: none; font-size: .85rem; font-weight: 600; color: var(--muted); transition: background .15s ease, color .15s ease; }
+    .switcher a { padding: .42rem .85rem; border-radius: 999px; text-decoration: none; font-size: .85rem; font-weight: 600; color: var(--muted); transition: background .15s ease, color .15s ease; white-space: nowrap; }
     .switcher a.active { background: var(--primary); color: #fff; }
 
     .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .82rem; color: var(--muted); margin-top: .35rem; }
     .legend span { display: inline-flex; align-items: center; gap: .35rem; }
-    .dot { width: .6rem; height: .6rem; border-radius: 50%; display: inline-block; }
+    .dot { width: .6rem; height: .6rem; border-radius: 50%; display: inline-block; flex-shrink: 0; }
     .dot.spent { background: var(--danger); }
     .dot.earned { background: var(--success); }
-    .dot.transfer { background: var(--accent); }
+    .dot.transfer { background: var(--muted); }
     .dot.scheduled { background: var(--primary); }
 
     /* month grid */
@@ -105,8 +54,7 @@
     }
     .day-cell:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
     .day-cell.outside { opacity: .38; }
-    .day-cell.today { border-color: var(--primary); background: color-mix(in oklab, var(--surface) 78%, var(--primary) 22%); }
-    .day-cell.future { background: color-mix(in oklab, var(--surface-2) 92%, var(--primary) 8%); }
+    .day-cell.today { border-color: var(--primary); }
     .day-top { display: flex; align-items: center; justify-content: space-between; }
     .day-num { font-weight: 700; font-size: .9rem; }
     .day-cell.today .day-num { color: var(--primary); }
@@ -115,10 +63,11 @@
     .day-add-btn {
       background: none; border: 1px solid var(--border); border-radius: 50%;
       width: 20px; height: 20px; padding: 0; line-height: 1;
-      font-size: .8rem; font-weight: 700; color: var(--primary);
-      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      color: var(--primary); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
       opacity: 0; transition: opacity .12s ease, background .12s ease;
     }
+    .day-add-btn svg { width: 11px; height: 11px; }
     .day-cell:hover .day-add-btn,
     .day-add-btn:focus-visible { opacity: 1; }
     .day-add-btn:hover { background: color-mix(in oklab, var(--primary) 16%, var(--surface)); }
@@ -126,14 +75,14 @@
     .amt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
     .amt.spent { color: var(--danger); }
     .amt.earned { color: var(--success); }
-    .amt.transfer { color: var(--accent); }
+    .amt.transfer { color: var(--muted); }
     .amt.balance { color: var(--muted); font-weight: 500; }
     .amt.balance.negative { color: var(--danger); }
 
     /* week grid */
     .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .45rem; align-items: stretch; }
     .week-day { border: 1px solid var(--border); border-radius: .8rem; background: var(--surface-2); padding: .5rem; min-height: 120px; display: flex; flex-direction: column; gap: .35rem; }
-    .week-day.today { border-color: var(--primary); background: color-mix(in oklab, var(--surface) 82%, var(--primary) 18%); }
+    .week-day.today { border-color: var(--primary); }
     .week-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: .3rem; font-size: .72rem; }
     .week-day-head .wd { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: .62rem; }
     .week-day-head .dn { font-weight: 700; font-size: .9rem; }
@@ -157,13 +106,14 @@
     .compact .ev-sub { font-size: .68rem; }
     .compact .ev-amount { font-size: .78rem; }
 
-    .pill { display: inline-flex; padding: .18rem .5rem; border-radius: 9999px; background: color-mix(in oklab, var(--primary) 10%, var(--surface)); color: var(--primary); font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; white-space: nowrap; }
+    .pill { font-size: .64rem; padding: .18rem .5rem; white-space: nowrap; }
     .pill.expense { background: color-mix(in oklab, var(--danger) 10%, var(--surface)); color: var(--danger); }
     .pill.income { background: color-mix(in oklab, var(--success) 12%, var(--surface)); color: var(--success); }
-    .pill.transfer { background: color-mix(in oklab, var(--accent) 14%, var(--surface)); color: var(--accent); }
+    .pill.transfer { background: color-mix(in oklab, var(--muted) 12%, var(--surface)); color: var(--muted); }
     .pill.scheduled { background: color-mix(in oklab, var(--primary) 10%, var(--surface)); color: var(--primary); }
     .attach { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--primary); text-decoration: none; font-weight: 600; }
     .attach:hover { text-decoration: underline; }
+    .attach svg { width: 13px; height: 13px; flex-shrink: 0; }
     .empty-note { color: var(--muted); font-size: .9rem; padding: .5rem 0; }
     .event-group-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 1rem 0 .45rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 
@@ -203,32 +153,22 @@
     /* buttons inside rows */
     .mini-btn {
       background: none; border: 1px solid var(--border); border-radius: .5rem; cursor: pointer;
-      padding: .16rem .4rem; font-size: .76rem; line-height: 1; color: var(--muted);
+      padding: .16rem .4rem; line-height: 1; color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center;
       transition: background .12s ease, color .12s ease, border-color .12s ease;
     }
+    .mini-btn svg { width: 11px; height: 11px; }
     .mini-btn:hover { background: color-mix(in oklab, var(--primary) 14%, var(--surface)); color: var(--primary); border-color: color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
     .mini-btn.danger:hover { background: color-mix(in oklab, var(--danger) 14%, var(--surface)); color: var(--danger); border-color: color-mix(in oklab, var(--border) 60%, var(--danger) 40%); }
     .add-day { font-weight: 700; color: var(--primary); }
 
-    /* form */
-    .form-grid { display: grid; gap: .85rem; }
-    .field { display: grid; gap: .3rem; }
-    .field label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
-    .field .help { font-size: .78rem; color: var(--muted); }
-    input, select, button { font: inherit; color: inherit; }
-    input, select { width: 100%; min-height: 44px; padding: .7rem .9rem; line-height: 1.35; border-radius: .8rem; border: 1px solid var(--border); background: var(--surface-2); font-size: .92rem; transition: border-color .12s ease, box-shadow .12s ease, background .12s ease; }
-    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent); background: color-mix(in oklab, var(--surface-2) 60%, var(--primary) 6%); }
     input[type="file"] { padding: .5rem; }
     select:disabled { opacity: .6; }
 
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity .18s ease; }
-    .overlay.open { opacity: 1; pointer-events: auto; }
-    .modal { background: color-mix(in oklab, var(--surface) 92%, white 8%); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; transform: translateY(12px) scale(.98); transition: transform .18s ease; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
-    .overlay.open .modal { transform: translateY(0) scale(1); }
-    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-    .modal-header h3 { font-size: 1.35rem; letter-spacing: -.03em; }
+    .modal { max-width: 640px; padding: 1.5rem; }
+    .modal-header { align-items: flex-start; }
+    .modal-header h3 { font-size: 1.35rem; letter-spacing: -.03em; font-weight: 700; }
     .modal-header .head-actions { display: flex; gap: .4rem; align-items: center; }
-    .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); line-height: 1; }
 
     @media (max-width: 760px) {
       .day-cell { min-height: 60px; padding: .35rem .3rem; }
@@ -239,22 +179,29 @@
       .week-num { font-size: .58rem; }
       .week-grid { grid-template-columns: repeat(7, minmax(84px, 1fr)); overflow-x: auto; }
     }
-  </style>
+
+    /* server-driven device overrides (on top of responsive breakpoints) */
+    html[data-device="mobile"] .day-cell { min-height:60px; padding:.35rem .3rem; }
+    html[data-device="mobile"] .calendar { grid-template-columns:1.4rem repeat(7,1fr); }
+    html[data-device="mobile"] .week-grid { grid-template-columns:repeat(7,minmax(84px,1fr)); overflow-x:auto; }
+    html[data-device="mobile"] .day-body, html[data-device="mobile"] .amt { font-size:.6rem; }
+    html[data-device="mobile"] .actions { width:100%; }
+    </style>
 </head>
 <body>
   <div class="shell">
     <header class="header">
       <div>
-        <h1>Calendario</h1>
-        <p>Detalle diario de gastos, ingresos y transferencias, con eventos programados y documentos adjuntos.</p>
+        <h1>{{ t('cal.title') }}</h1>
+        <p>{{ t('cal.subtitle') }}</p>
       </div>
       <div class="actions">
-        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
-        <a class="btn btn-icon" href="." aria-label="Volver al dashboard">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">Dashboard</span>
+        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="{{ t('profile.title') }}">{{ (username or '?')[0] | upper }}</button>
+        <a class="btn btn-icon hide-mobile" href="." aria-label="{{ t('nav.back.dashboard') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">{{ t('nav.dashboard') }}</span>
         </a>
-        <a class="btn btn-icon" href="loans" aria-label="Simulador de hipoteca">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">Hipoteca</span>
+        <a class="btn btn-icon hide-mobile" href="loans" aria-label="{{ t('nav.mortgage') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">{{ t('nav.mortgage') }}</span>
         </a>
       </div>
     </header>
@@ -262,22 +209,22 @@
     <div class="card">
       <div class="toolbar">
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-          <a class="btn" href="calendar?view={{ view }}&date={{ prev_date }}">‹</a>
-          <a class="btn" href="calendar?view={{ view }}&date={{ today }}">Hoy</a>
-          <a class="btn" href="calendar?view={{ view }}&date={{ next_date }}">›</a>
+          <a class="btn" href="calendar?view={{ view }}&date={{ prev_date }}" aria-label="{{ t('cal.today') }}" style="width:40px;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="15 18 9 12 15 6"></polyline></svg></a>
+          <a class="btn" href="calendar?view={{ view }}&date={{ today }}">{{ t('cal.today') }}</a>
+          <a class="btn" href="calendar?view={{ view }}&date={{ next_date }}" aria-label="→" style="width:40px;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
           <div class="switcher" role="tablist">
-            <a href="calendar?view=month&date={{ anchor }}" class="{{ 'active' if view == 'month' else '' }}">Mes</a>
-            <a href="calendar?view=week&date={{ anchor }}" class="{{ 'active' if view == 'week' else '' }}">Semana</a>
-            <a href="calendar?view=day&date={{ anchor }}" class="{{ 'active' if view == 'day' else '' }}">Día</a>
-            <a href="calendar?view=year&date={{ anchor }}" class="{{ 'active' if view == 'year' else '' }}">Año</a>
+            <a href="calendar?view=month&date={{ anchor }}" class="{{ 'active' if view == 'month' else '' }}">{{ t('cal.view.month') }}</a>
+            <a href="calendar?view=week&date={{ anchor }}" class="{{ 'active' if view == 'week' else '' }}">{{ t('cal.view.week') }}</a>
+            <a href="calendar?view=day&date={{ anchor }}" class="{{ 'active' if view == 'day' else '' }}">{{ t('cal.view.day') }}</a>
+            <a href="calendar?view=year&date={{ anchor }}" class="{{ 'active' if view == 'year' else '' }}">{{ t('cal.view.year') }}</a>
           </div>
         </div>
         <h2>{{ title }}</h2>
         <div class="legend">
-          <span><i class="dot spent"></i>Gastos</span>
-          <span><i class="dot earned"></i>Ingresos</span>
-          <span><i class="dot transfer"></i>Transferencias</span>
-          <span><i class="dot scheduled"></i>Programado</span>
+          <span><i class="dot spent"></i>{{ t('cal.legend.expenses') }}</span>
+          <span><i class="dot earned"></i>{{ t('cal.legend.income') }}</span>
+          <span><i class="dot transfer"></i>{{ t('cal.legend.transfers') }}</span>
+          <span><i class="dot scheduled"></i>{{ t('cal.legend.scheduled') }}</span>
         </div>
       </div>
     </div>
@@ -288,22 +235,22 @@
           <div class="cal-weekday"></div>
           {% for w in weekdays %}<div class="cal-weekday">{{ w }}</div>{% endfor %}
           {% for week in weeks %}
-            <a class="week-num" href="calendar?view=week&date={{ week.days[0]['date'] }}" title="Semana {{ week.week_number }}">{{ week.week_number }}</a>
+            <a class="week-num" href="calendar?view=week&date={{ week.days[0]['date'] }}" title="{{ t('cal.week.title', n=week.week_number) }}">{{ week.week_number }}</a>
             {% for d in week.days %}
               <div class="day-cell {{ 'outside' if not d.in_month else '' }} {{ 'today' if d.is_today else '' }} {{ 'future' if d.is_future else '' }}" data-date="{{ d.date }}">
                 <div class="day-top">
                   <span class="day-num">{{ d.day }}</span>
                   <span class="day-top-tools">
-                    {% if d.has_scheduled %}<span class="sched-badge" title="Eventos programados"></span>{% endif %}
-                    <button type="button" class="day-add-btn" data-add="{{ d.date }}" title="Añadir movimiento" aria-label="Añadir movimiento">＋</button>
+                    {% if d.has_scheduled %}<span class="sched-badge" title="{{ t('cal.scheduled.events') }}"></span>{% endif %}
+                    <button type="button" class="day-add-btn" data-add="{{ d.date }}" title="{{ t('cal.add.movement') }}" aria-label="{{ t('cal.add.movement') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                   </span>
                 </div>
                 <div class="day-body">
                   {% if d.spent > 0 %}<div class="amt spent">-{{ default_currency_sym }}{{ '%.2f'|format(d.spent) }}</div>{% endif %}
                   {% if d.earned > 0 %}<div class="amt earned">+{{ default_currency_sym }}{{ '%.2f'|format(d.earned) }}</div>{% endif %}
                   {% if d.transfers > 0 %}<div class="amt transfer">⇄ {{ d.transfers }}</div>{% endif %}
-                  {% if d.has_scheduled %}<div class="amt" style="color:var(--primary)">programado</div>{% endif %}
-                  {% if d.balance is not none %}<div class="amt balance {{ 'negative' if d.balance < 0 else '' }}" title="Saldo">{{ default_currency_sym }}{{ '%.2f'|format(d.balance) }}</div>{% endif %}
+                  {% if d.has_scheduled %}<div class="amt" style="color:var(--primary)">{{ t('cal.scheduled.short') }}</div>{% endif %}
+                  {% if d.balance is not none %}<div class="amt balance {{ 'negative' if d.balance < 0 else '' }}" title="{{ t('cal.balance') }}">{{ default_currency_sym }}{{ '%.2f'|format(d.balance) }}</div>{% endif %}
                 </div>
               </div>
             {% endfor %}
@@ -317,7 +264,7 @@
               <div class="week-day-head">
                 <span class="wd">{{ d.weekday }}</span>
                 <span class="dn">{{ d.day }}</span>
-                <button type="button" class="mini-btn add-day" data-add="{{ d.date }}" title="Añadir movimiento">＋</button>
+                <button type="button" class="mini-btn add-day" data-add="{{ d.date }}" title="{{ t('cal.add.movement') }}" aria-label="{{ t('cal.add.movement') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
               </div>
               {% if d.balance is not none %}<div class="week-balance {{ 'negative' if d.balance < 0 else '' }}">{{ default_currency_sym }}{{ '%.2f'|format(d.balance) }}</div>{% endif %}
               <div class="week-events compact">
@@ -325,16 +272,16 @@
                   <div class="event">
                     <div class="ev-left">
                       <div class="ev-name">
-                        <span class="pill {{ ev.type }}">{{ 'Ingreso' if ev.type == 'income' else 'Transferencia' if ev.type == 'transfer' else 'Gasto' }}</span>
+                        <span class="pill {{ ev.type }}">{{ t('cal.type.income') if ev.type == 'income' else t('cal.type.transfer') if ev.type == 'transfer' else t('cal.type.expense') }}</span>
                       </div>
                       <div class="ev-sub">{{ ev.name }}{% if ev.time %} · {{ ev.time }}{% endif %}</div>
-                      {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener">📎</a>{% endif %}
+                      {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em" aria-hidden="true" focusable="false"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></a>{% endif %}
                     </div>
                     <div class="event-actions">
                       <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
                       <div style="display:flex;gap:.25rem">
-                        <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="Editar">✎</button>
-                        <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="Eliminar">🗑</button>
+                        <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="{{ t('cal.edit') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
+                        <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="{{ t('cal.delete') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                       </div>
                     </div>
                   </div>
@@ -342,7 +289,7 @@
                 {% for ev in d.scheduled %}
                   <div class="event">
                     <div class="ev-left">
-                      <div class="ev-name"><span class="pill scheduled">Prog.</span></div>
+                      <div class="ev-name"><span class="pill scheduled">{{ t('cal.pill.prog') }}</span></div>
                       <div class="ev-sub">{{ ev.name }}</div>
                     </div>
                     <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
@@ -361,13 +308,13 @@
               <a class="year-month-title" href="calendar?view=month&date={{ m.month_anchor }}">{{ m.name }}</a>
               <div class="mini-month">
                 <div class="mini-weekdays">
-                  {% for w in ['L','M','X','J','V','S','D'] %}<span>{{ w }}</span>{% endfor %}
+                  {% for w in weekdays_mini %}<span>{{ w }}</span>{% endfor %}
                 </div>
                 {% for week in m.weeks %}
                   <div class="mini-week">
                     {% for c in week %}
                       {% if c %}
-                        <a class="mini-day {{ 'today' if c.is_today else '' }}" href="calendar?view=day&date={{ c.date }}" title="{{ c.date }} · Saldo {{ default_currency_sym }}{{ '%.2f'|format(c.balance) }}">
+                        <a class="mini-day {{ 'today' if c.is_today else '' }}" href="calendar?view=day&date={{ c.date }}" title="{{ c.date }} · {{ t('cal.balance') }} {{ default_currency_sym }}{{ '%.2f'|format(c.balance) }}">
                           <span class="mini-day-num">{{ c.day }}</span>
                           <span class="mini-dots">
                             {% if c.spent > 0 %}<i class="dot spent"></i>{% endif %}
@@ -389,19 +336,19 @@
 
       {% else %}
         <div class="day-summary">
-          <span class="sum spent">Gastos: -{{ default_currency_sym }}{{ '%.2f'|format(day_totals.spent) }}</span>
-          <span class="sum earned">Ingresos: +{{ default_currency_sym }}{{ '%.2f'|format(day_totals.earned) }}</span>
-          <span class="sum balance {{ 'negative' if day_balance < 0 else '' }}">Saldo: {{ default_currency_sym }}{{ '%.2f'|format(day_balance) }}</span>
-          <button type="button" class="btn primary" data-add="{{ anchor }}" style="margin-left:auto">＋ Añadir movimiento</button>
+          <span class="sum spent">{{ t('cal.day.spent') }} -{{ default_currency_sym }}{{ '%.2f'|format(day_totals.spent) }}</span>
+          <span class="sum earned">{{ t('cal.day.earned') }} +{{ default_currency_sym }}{{ '%.2f'|format(day_totals.earned) }}</span>
+          <span class="sum balance {{ 'negative' if day_balance < 0 else '' }}">{{ t('cal.day.balance') }} {{ default_currency_sym }}{{ '%.2f'|format(day_balance) }}</span>
+          <button type="button" class="btn primary" data-add="{{ anchor }}" style="margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {{ t('cal.add.movement') }}</button>
         </div>
 
         {% if day_records %}
-          <div class="event-group-title">Movimientos del día</div>
+          <div class="event-group-title">{{ t('cal.day.movements') }}</div>
           {% for ev in day_records %}
             <div class="event">
               <div class="ev-left">
                 <div class="ev-name">
-                  <span class="pill {{ ev.type }}">{{ 'Ingreso' if ev.type == 'income' else 'Transferencia' if ev.type == 'transfer' else 'Gasto' }}</span>
+                  <span class="pill {{ ev.type }}">{{ t('cal.type.income') if ev.type == 'income' else t('cal.type.transfer') if ev.type == 'transfer' else t('cal.type.expense') }}</span>
                   {{ ev.name }}
                 </div>
                 <div class="ev-sub">
@@ -410,13 +357,13 @@
                   {% if ev.time %} · {{ ev.time }}{% endif %}
                   {% if ev.notes %} · {{ ev.notes }}{% endif %}
                 </div>
-                {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener">📎 {{ ev.attachment_name or 'documento' }}</a>{% endif %}
+                {% if ev.attachment_path %}<a class="attach" href="{{ base_path(request) }}{{ ev.attachment_path }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em" aria-hidden="true" focusable="false"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> {{ ev.attachment_name or t('cal.document') }}</a>{% endif %}
               </div>
               <div class="event-actions">
                 <div class="ev-amount {{ ev.type }}">{% if ev.type == 'income' %}+{% elif ev.type == 'expense' %}-{% else %}⇄{% endif %}{{ ev.currency_sym }}{{ '%.2f'|format(ev.amount) }}</div>
                 <div style="display:flex;gap:.25rem">
-                  <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="Editar">✎</button>
-                  <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="Eliminar">🗑</button>
+                  <button type="button" class="mini-btn" data-edit-key="{{ ev.type }}:{{ ev.id }}" title="{{ t('cal.edit') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
+                  <button type="button" class="mini-btn danger" data-del-key="{{ ev.type }}:{{ ev.id }}" title="{{ t('cal.delete') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                 </div>
               </div>
             </div>
@@ -424,11 +371,11 @@
         {% endif %}
 
         {% if day_scheduled %}
-          <div class="event-group-title">Eventos programados</div>
+          <div class="event-group-title">{{ t('cal.scheduled.events') }}</div>
           {% for ev in day_scheduled %}
             <div class="event">
               <div class="ev-left">
-                <div class="ev-name"><span class="pill scheduled">Programado</span> {{ ev.name }}</div>
+                <div class="ev-name"><span class="pill scheduled">{{ t('cal.legend.scheduled') }}</span> {{ ev.name }}</div>
                 <div class="ev-sub">
                   {% if ev.type == 'transfer' %}{{ ev.from_account }} → {{ ev.to_account }}{% else %}{{ ev.account }}{% endif %}
                   {% if ev.category %} · {{ ev.category }}{% endif %}
@@ -441,11 +388,34 @@
         {% endif %}
 
         {% if not day_records and not day_scheduled %}
-          <div class="empty-note">No hay movimientos ni eventos programados para este día.</div>
+          <div class="empty-note">{{ t('cal.day.empty') }}</div>
         {% endif %}
       {% endif %}
     </div>
   </div>
+
+  <nav class="mobilenav" aria-label="{{ t('apps.title') }}">
+    <a class="mobilenav-item" href="./">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>{{ t('nav.dashboard') }}</span>
+    </a>
+    <a class="mobilenav-item" href="expenses/history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span>{{ t('nav.movements') }}</span>
+    </a>
+    <a class="mobilenav-item active" href="calendar" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>{{ t('nav.calendar') }}</span>
+    </a>
+    <a class="mobilenav-item" href="loans">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg>
+      <span>{{ t('nav.mortgage') }}</span>
+    </a>
+    <button class="mobilenav-item" type="button" data-apps-trigger>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+      <span>{{ t('apps.title') }}</span>
+    </button>
+  </nav>
 
   <!-- day detail modal -->
   <div class="overlay" id="day-overlay">
@@ -453,8 +423,8 @@
       <div class="modal-header">
         <h3 id="day-title">—</h3>
         <div class="head-actions">
-          <button class="btn primary" id="day-add" type="button" style="font-size:.8rem;padding:.45rem .85rem">＋ Añadir</button>
-          <button class="modal-close" id="day-close" type="button" aria-label="Cerrar">✕</button>
+          <button class="btn primary" id="day-add" type="button" style="font-size:.8rem;padding:.45rem .85rem"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {{ t('cal.day.add.short') }}</button>
+          <button class="modal-close" id="day-close" type="button" aria-label="{{ t('apps.close') }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
       </div>
       <div class="day-summary" id="day-summary"></div>
@@ -466,71 +436,78 @@
   <div class="overlay" id="editor-overlay">
     <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
       <div class="modal-header">
-        <h3 id="editor-title">Añadir movimiento</h3>
-        <button class="modal-close" id="editor-close" type="button" aria-label="Cerrar">✕</button>
+        <h3 id="editor-title">{{ t('cal.editor.title') }}</h3>
+        <button class="modal-close" id="editor-close" type="button" aria-label="{{ t('apps.close') }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form id="editor-form" class="form-grid" enctype="multipart/form-data">
         <input type="hidden" name="type" id="editor-type" value="expense">
         <div class="field">
-          <label>Tipo</label>
+          <label>{{ t('cal.editor.type') }}</label>
           <select id="editor-type-select">
-            <option value="expense">Gasto</option>
-            <option value="income">Ingreso</option>
-            <option value="transfer">Transferencia</option>
+            <option value="expense">{{ t('cal.type.expense') }}</option>
+            <option value="income">{{ t('cal.type.income') }}</option>
+            <option value="transfer">{{ t('cal.type.transfer') }}</option>
           </select>
         </div>
         <div class="field" id="field-name">
-          <label>Concepto</label>
+          <label>{{ t('cal.editor.concept') }}</label>
           <input type="text" name="name" id="editor-name" required>
         </div>
         <div class="field">
-          <label>Importe</label>
+          <label>{{ t('cal.editor.amount') }}</label>
           <input type="number" name="amount" id="editor-amount" step="0.01" min="0.01" required>
         </div>
         <div class="field" id="field-account">
-          <label>Cuenta</label>
+          <label>{{ t('cal.editor.account') }}</label>
           <select name="account_id" id="editor-account"></select>
         </div>
         <div class="field" id="field-from">
-          <label>Desde</label>
+          <label>{{ t('cal.editor.from') }}</label>
           <select name="from_account_id" id="editor-from"></select>
         </div>
         <div class="field" id="field-to">
-          <label>Hasta</label>
+          <label>{{ t('cal.editor.to') }}</label>
           <select name="to_account_id" id="editor-to"></select>
         </div>
         <div class="field" id="field-category">
-          <label>Categoría</label>
+          <label>{{ t('cal.editor.category') }}</label>
           <select name="category" id="editor-category"></select>
         </div>
         <div class="field">
-          <label>Fecha</label>
+          <label>{{ t('cal.editor.date') }}</label>
           <input type="date" name="date" id="editor-date" required>
         </div>
         <div class="field">
-          <label>Hora (opcional)</label>
+          <label>{{ t('cal.editor.time') }}</label>
           <input type="time" name="time" id="editor-time">
         </div>
         <div class="field">
-          <label>Notas</label>
+          <label>{{ t('cal.editor.notes') }}</label>
           <input type="text" name="notes" id="editor-notes">
         </div>
         <div class="field">
-          <label>Adjunto (opcional)</label>
+          <label>{{ t('cal.editor.attachment') }}</label>
           <input type="file" name="attachment" id="editor-attachment">
         </div>
         <div class="field" id="field-remove" style="display:none">
           <label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0;font-size:.82rem">
-            <input type="checkbox" name="remove_attachment" value="on" style="width:auto;min-height:0"> Quitar adjunto actual
+            <input type="checkbox" name="remove_attachment" value="on" style="width:auto;min-height:0"> {{ t('cal.editor.remove.attachment') }}
           </label>
         </div>
-        <button class="btn primary" type="submit">Guardar</button>
+        <button class="btn primary" type="submit">{{ t('cal.editor.save') }}</button>
       </form>
     </div>
   </div>
 
   <script>
     (() => {
+      const I18N = {{ i18n_dict(language) | tojson }};
+      const t = (key, vars = {}) => {
+        let s = I18N[key] ?? key;
+        for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+        return s;
+      };
+
       // ── server-injected data ───────────────────────────────────────────────
       const VIEW = {{ view | tojson }};
       const ANCHOR = {{ anchor | tojson }};
@@ -543,7 +520,7 @@
       const RECORDS_BY_ID = {};
       SERVER_RECORDS.forEach(r => { RECORDS_BY_ID[r.type + ':' + r.id] = r; });
 
-      const TYPE_LABEL = { expense: 'Gasto', income: 'Ingreso', transfer: 'Transferencia' };
+      const TYPE_LABEL = { expense: t('cal.type.expense'), income: t('cal.type.income'), transfer: t('cal.type.transfer') };
 
       function el(tag, cls, text) {
         const node = document.createElement(tag);
@@ -579,7 +556,7 @@
           link.href = BASE_PATH + (ev.attachment_path || '');
           link.target = '_blank';
           link.rel = 'noopener';
-          link.textContent = '📎 ' + (ev.attachment_name || 'documento');
+          link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1em;height:1em" aria-hidden="true" focusable="false"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>' + ' ' + (ev.attachment_name || t('cal.document'));
           left.appendChild(link);
         }
 
@@ -593,13 +570,13 @@
           const actions = el('div', '');
           actions.style.display = 'flex';
           actions.style.gap = '.25rem';
-          const editBtn = el('button', 'mini-btn', '✎');
+          const editBtn = el('button', 'mini-btn'); editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
           editBtn.type = 'button';
-          editBtn.title = 'Editar';
+          editBtn.title = t('cal.edit');
           editBtn.addEventListener('click', () => openEditor(ev));
-          const delBtn = el('button', 'mini-btn danger', '🗑');
+          const delBtn = el('button', 'mini-btn danger'); delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
           delBtn.type = 'button';
-          delBtn.title = 'Eliminar';
+          delBtn.title = t('cal.delete');
           delBtn.addEventListener('click', () => deleteRecord(ev));
           actions.appendChild(editBtn);
           actions.appendChild(delBtn);
@@ -622,23 +599,23 @@
           if (!resp.ok) throw new Error('error');
           const data = await resp.json();
           titleEl.textContent = data.label;
-          summaryEl.appendChild(el('span', 'sum spent', `Gastos: -${data.totals.spent.toFixed(2)}`));
-          summaryEl.appendChild(el('span', 'sum earned', `Ingresos: +${data.totals.earned.toFixed(2)}`));
-          if (data.balance != null) summaryEl.appendChild(el('span', 'sum balance' + (data.balance < 0 ? ' negative' : ''), `Saldo: ${DEFAULT_SYM}${data.balance.toFixed(2)}`));
+          summaryEl.appendChild(el('span', 'sum spent', `${t('cal.day.spent')} -${data.totals.spent.toFixed(2)}`));
+          summaryEl.appendChild(el('span', 'sum earned', `${t('cal.day.earned')} +${data.totals.earned.toFixed(2)}`));
+          if (data.balance != null) summaryEl.appendChild(el('span', 'sum balance' + (data.balance < 0 ? ' negative' : ''), `${t('cal.day.balance')} ${DEFAULT_SYM}${data.balance.toFixed(2)}`));
           if (data.records.length) {
-            contentEl.appendChild(el('div', 'event-group-title', 'Movimientos del día'));
+            contentEl.appendChild(el('div', 'event-group-title', t('cal.day.movements')));
             data.records.forEach(r => contentEl.appendChild(renderEvent(r)));
           }
           if (data.scheduled.length) {
-            contentEl.appendChild(el('div', 'event-group-title', 'Eventos programados'));
+            contentEl.appendChild(el('div', 'event-group-title', t('cal.scheduled.events')));
             data.scheduled.forEach(s => contentEl.appendChild(renderEvent({ ...s, time: null, attachment_path: null })));
           }
           if (!data.records.length && !data.scheduled.length) {
-            contentEl.appendChild(el('div', 'empty-note', 'No hay movimientos ni eventos programados para este día.'));
+            contentEl.appendChild(el('div', 'empty-note', t('cal.day.empty')));
           }
         } catch (e) {
-          titleEl.textContent = 'Error';
-          contentEl.appendChild(el('div', 'empty-note', 'No se pudo cargar el detalle del día.'));
+          titleEl.textContent = t('cal.error');
+          contentEl.appendChild(el('div', 'empty-note', t('cal.day.load.error')));
         }
       }
 
@@ -657,12 +634,12 @@
         ['editor-account', 'editor-from', 'editor-to'].forEach(id => {
           const sel = document.getElementById(id);
           sel.innerHTML = '';
-          sel.appendChild(new Option('— selecciona —', ''));
+          sel.appendChild(new Option(t('cal.editor.select'), ''));
           ACCOUNTS.forEach(a => sel.appendChild(new Option(a.name, a.id)));
         });
         const catSel = document.getElementById('editor-category');
         catSel.innerHTML = '';
-        catSel.appendChild(new Option('— automática —', ''));
+        catSel.appendChild(new Option(t('cal.editor.auto'), ''));
         EXPENSE_CATEGORIES.forEach(c => catSel.appendChild(new Option(c, c)));
       }
 
@@ -705,7 +682,7 @@
           typeSel.disabled = true;
           if (record.attachment_path) document.getElementById('field-remove').style.display = 'grid';
         }
-        document.getElementById('editor-title').textContent = record ? 'Editar movimiento' : 'Añadir movimiento';
+        document.getElementById('editor-title').textContent = record ? t('cal.editor.title.edit') : t('cal.editor.title');
         syncEditorType();
         editorOverlay.classList.add('open');
       }
@@ -719,7 +696,7 @@
       }
 
       async function deleteRecord(record) {
-        if (!confirm(`¿Eliminar "${record.name || 'movimiento'}"?`)) return;
+        if (!confirm(t('cal.delete.confirm', { name: record.name || t('cal.movement') }))) return;
         const fd = new FormData();
         fd.append('type', record.type);
         fd.append('date', record.date);
@@ -727,12 +704,12 @@
           const resp = await fetch(`api/calendar/day/movement/${record.id}/delete`, { method: 'POST', body: fd });
           if (!resp.ok) {
             const data = await resp.json().catch(() => null);
-            alert(data?.error || 'No se pudo eliminar el movimiento.');
+            alert(data?.error || t('cal.delete.error'));
             return;
           }
           afterMutation(record.date);
         } catch (e) {
-          alert('Error de red al eliminar.');
+          alert(t('cal.delete.network'));
         }
       }
 
@@ -747,13 +724,13 @@
           const resp = await fetch(url, { method: 'POST', body: fd });
           const data = await resp.json().catch(() => null);
           if (!resp.ok) {
-            alert(data?.error || 'No se pudo guardar el movimiento.');
+            alert(data?.error || t('cal.save.error'));
             return;
           }
           editorOverlay.classList.remove('open');
           afterMutation(date);
         } catch (err) {
-          alert('Error de red al guardar.');
+          alert(t('cal.save.network'));
         }
       });
 

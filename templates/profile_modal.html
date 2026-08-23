@@ -3,7 +3,7 @@
   .profile-trigger:hover { transform:translateY(-1px); }
   .profile-overlay { position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(0,0,0,.38); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .18s ease; }
   .profile-overlay.open { opacity:1; pointer-events:auto; }
-  .profile-modal { width:min(100%,500px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius,1.15rem); background:var(--surface-strong,#fffdf9); color:var(--text); box-shadow:0 18px 55px rgba(0,0,0,.2); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
+  .profile-modal { width:min(100%,500px); max-height:92vh; overflow:auto; padding:1.2rem; border:1px solid var(--border); border-radius:var(--radius,1.15rem); background:var(--surface-strong,#fffdf9); color:var(--text); box-shadow:var(--shadow, 0 18px 55px rgba(0,0,0,.2)); transform:translateY(12px) scale(.98); transition:transform .18s ease; }
   .profile-overlay.open .profile-modal { transform:translateY(0) scale(1); }
   .profile-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.8rem; margin-bottom:1rem; }
   .profile-modal-head h2 { font-size:1.15rem; letter-spacing:-.03em; }
@@ -27,28 +27,28 @@
   <div class="profile-modal">
     <div class="profile-modal-head">
       <div>
-        <h2 id="profile-modal-title">{% if language|default('es') == 'en' %}Profile settings{% else %}Ajustes del perfil{% endif %}</h2>
-        <p>{{ username or '' }} · {% if language|default('es') == 'en' %}Personalize your experience{% else %}Personaliza tu experiencia{% endif %}</p>
+        <h2 id="profile-modal-title">{{ t('profile.title') }}</h2>
+        <p>{{ username or '' }} · {{ t('profile.subtitle') }}</p>
       </div>
-      <button class="profile-close" id="profile-close" type="button" aria-label="{% if language|default('es') == 'en' %}Close{% else %}Cerrar{% endif %}">✕</button>
+      <button class="profile-close" id="profile-close" type="button" aria-label="{{ t('apps.close') }}">✕</button>
     </div>
 
     <section class="profile-section">
-      <h3>{% if language|default('es') == 'en' %}Language{% else %}Idioma{% endif %}</h3>
+      <h3>{{ t('profile.language') }}</h3>
       <form id="profile-language-form">
-        <div class="profile-field"><label for="profile-language">{% if language|default('es') == 'en' %}Page language{% else %}Idioma de la página{% endif %}</label><select id="profile-language" name="language"><option value="es">Español</option><option value="en">English</option></select></div>
-        <div class="profile-actions" style="margin-top:.6rem"><button class="profile-btn profile-btn-primary" type="submit">{% if language|default('es') == 'en' %}Save language{% else %}Guardar idioma{% endif %}</button></div>
+        <div class="profile-field"><label for="profile-language">{{ t('profile.language.label') }}</label><select id="profile-language" name="language"><option value="es">Español</option><option value="en">English</option></select></div>
+        <div class="profile-actions" style="margin-top:.6rem"><button class="profile-btn profile-btn-primary" type="submit">{{ t('profile.save.language') }}</button></div>
       </form>
     </section>
 
     <section class="profile-section">
-      <h3>{% if language|default('es') == 'en' %}Change password{% else %}Cambiar contraseña{% endif %}</h3>
+      <h3>{{ t('profile.password') }}</h3>
       <form id="profile-password-form">
-        <div class="profile-field"><label for="profile-current-password">{% if language|default('es') == 'en' %}Current password{% else %}Contraseña actual{% endif %}</label><input id="profile-current-password" name="current_password" type="password" autocomplete="current-password" required></div>
-        <div class="profile-field"><label for="profile-new-password">{% if language|default('es') == 'en' %}New password{% else %}Nueva contraseña{% endif %}</label><input id="profile-new-password" name="new_password" type="password" minlength="6" autocomplete="new-password" required></div>
-        <div class="profile-field"><label for="profile-new-password2">{% if language|default('es') == 'en' %}Repeat new password{% else %}Repite la nueva contraseña{% endif %}</label><input id="profile-new-password2" name="new_password2" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="profile-field"><label for="profile-current-password">{{ t('profile.current.password') }}</label><input id="profile-current-password" name="current_password" type="password" autocomplete="current-password" required></div>
+        <div class="profile-field"><label for="profile-new-password">{{ t('profile.new.password') }}</label><input id="profile-new-password" name="new_password" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="profile-field"><label for="profile-new-password2">{{ t('profile.repeat.new') }}</label><input id="profile-new-password2" name="new_password2" type="password" minlength="6" autocomplete="new-password" required></div>
         <div class="profile-error" id="profile-password-error"></div><div class="profile-message" id="profile-password-message"></div>
-        <div class="profile-actions"><button class="profile-btn profile-btn-primary" type="submit">{% if language|default('es') == 'en' %}Update password{% else %}Actualizar contraseña{% endif %}</button></div>
+        <div class="profile-actions"><button class="profile-btn profile-btn-primary" type="submit">{{ t('profile.update.password') }}</button></div>
       </form>
     </section>
   </div>
@@ -58,6 +58,8 @@
   (() => {
     const overlay = document.getElementById('profile-overlay');
     const close = document.getElementById('profile-close');
+    const I18N = {{ i18n_dict(language) | tojson }};
+    const t = (key) => I18N[key] ?? key;
     const language = '{{ language|default("es") }}';
     const languageSelect = document.getElementById('profile-language');
     const passwordForm = document.getElementById('profile-password-form');
@@ -71,40 +73,21 @@
     if (languageSelect) languageSelect.value = language;
 
     document.documentElement.lang = language;
-    if (language === 'en') {
-      const translations = {
-        'Movimientos':'Movements', 'Calendario':'Calendar', 'Hipoteca':'Mortgage', 'Bolsa':'Markets', 'Cotización':'Quote', 'Añadir cuenta':'Add account', 'Nueva posición':'New position', 'Salir':'Sign out',
-        'Control de patrimonio':'Wealth control', 'Valor de cartera':'Portfolio value', 'Invertido':'Invested', 'Gastos':'Expenses', 'Ingresos':'Income', 'Balance':'Balance',
-        'Dashboard':'Dashboard', 'Mes':'Month', 'Semana':'Week', 'Día':'Day', 'Año':'Year', 'Hoy':'Today', 'Atrás':'Back', 'Adelante':'Next',
-        'Movimientos de ingresos y gastos':'Income and expense movements', 'Registro de movimientos manuales y ejecuciones recurrentes':'Manual and recurring movement records',
-        'Simulador de hipoteca':'Mortgage simulator', 'Planificación de vivienda · España':'Home planning · Spain', 'Simulador de hipoteca':'Mortgage simulator',
-        'Datos de la compra':'Purchase details', 'Precio de la vivienda':'Property price', 'Aportación inicial total':'Total initial contribution', 'Gastos de compra':'Purchase costs',
-        'Plazo':'Term', 'Tipo de interés (TIN)':'Interest rate (TIN)', 'Comisión de apertura':'Opening fee', 'Coste extra mensual':'Extra monthly cost',
-        'Cuota hipotecaria':'Mortgage payment', 'Importe del préstamo':'Loan amount', 'Intereses totales':'Total interest', 'Efectivo inicial':'Initial cash',
-        'Coste acumulado':'Accumulated cost', 'Capital frente a intereses':'Principal versus interest', 'Amortización anual':'Annual amortization',
-        'Hipotecas guardadas':'Saved mortgages', 'Recomendaciones':'Recommendations', 'Guardar hipoteca':'Save mortgage', 'Editar encuesta':'Edit survey',
-        'Idioma':'Language', 'Cambiar contraseña':'Change password', 'Guardar cuenta':'Save account', 'Guardar meta':'Save goal',
-      };
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      const textNodes = [];
-      while (walker.nextNode()) textNodes.push(walker.currentNode);
-      textNodes.forEach((node) => { const trimmed = node.nodeValue.trim(); if (translations[trimmed]) node.nodeValue = node.nodeValue.replace(trimmed, translations[trimmed]); });
-    }
 
     document.getElementById('profile-language-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const response = await fetch('profile/preferences', { method:'POST', body:new FormData(event.currentTarget) });
       const payload = await response.json().catch(() => ({}));
       if (response.ok) window.location.reload();
-      else alert(payload.error || (language === 'en' ? 'Could not save language.' : 'No se pudo guardar el idioma.'));
+      else alert(payload.error || t('profile.js.save.error'));
     });
 
     passwordForm?.addEventListener('submit', async (event) => {
       event.preventDefault(); passwordError.textContent = ''; passwordMessage.textContent = '';
       const response = await fetch('profile/password', { method:'POST', body:new FormData(event.currentTarget) });
       const payload = await response.json().catch(() => ({}));
-      if (response.ok) { passwordForm.reset(); passwordMessage.textContent = language === 'en' ? 'Password updated.' : 'Contraseña actualizada.'; }
-      else passwordError.textContent = payload.error || (language === 'en' ? 'Could not update password.' : 'No se pudo actualizar la contraseña.');
+      if (response.ok) { passwordForm.reset(); passwordMessage.textContent = t('profile.js.password.ok'); }
+      else passwordError.textContent = payload.error || t('profile.js.password.error');
     });
   })();
 </script>

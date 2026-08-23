@@ -1,53 +1,24 @@
 <!DOCTYPE html>
-<html lang="{{ language|default('es') }}">
+<html lang="{{ language|default('es') }}" data-device="{{ device_of(request) }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="{{ base_path(request) }}/">
-  <title>Movimientos de ingresos y gastos</title>
+  <title>{{ t('exp.title') }}</title>
   <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="apple-touch-icon" href="static/favicon.svg">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #f4efe8; --bg-accent: #efe4d6; --surface: rgba(255,255,255,.84); --surface-2: rgba(255,255,255,.58);
-      --border: rgba(28,35,34,.10); --text: #171b1a; --muted: #66706b;
-      --primary: #0f6a63; --danger: #b54848; --success: #2f7d42; --accent: #c9792b;
-      --radius: 1.15rem; --shadow: 0 24px 60px rgba(42,42,32,.08); --shadow-soft: 0 8px 24px rgba(42,42,32,.06);
-      color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1313; --bg-accent: #16201d; --surface: rgba(24,30,29,.84); --surface-2: rgba(34,42,40,.72);
-        --border: rgba(255,255,255,.08); --text: #eef1ed; --muted: #9aa7a0;
-        --primary: #6eb7ac; --danger: #ea7b7b; --success: #73bf8b; --accent: #e2a15f;
-        --shadow: 0 24px 60px rgba(0,0,0,.28); --shadow-soft: 0 8px 24px rgba(0,0,0,.18);
-        color-scheme: dark;
-      }
-    }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body {
-      font-family:'Satoshi','Inter',system-ui,sans-serif; color:var(--text); line-height:1.6;
-      background:
-        radial-gradient(circle at top left, color-mix(in oklab, var(--bg-accent) 90%, white) 0, transparent 30%),
-        radial-gradient(circle at 100% 0, color-mix(in oklab, var(--primary) 12%, transparent) 0, transparent 32%),
-        linear-gradient(180deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 86%, white) 100%);
-      min-height:100vh;
-    }
+  <!-- Compiled by _shared/tailwind/build.sh -->
+  <link rel="stylesheet" href="static/tailwind.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="static/app.css">
+    <style>
+    /* expenses-history-specific layout (shared tokens/components live in static/app.css) */
     a { color:inherit; }
-    .shell { max-width:1320px; margin:0 auto; padding:1.25rem 1.25rem 2rem; }
-    .header {
-      display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.25rem;
-      margin-bottom:1rem; flex-wrap:wrap; border:1px solid var(--border); border-radius:calc(var(--radius) + .2rem);
-      background:linear-gradient(145deg, color-mix(in oklab, var(--surface) 82%, var(--accent) 18%) 0%, color-mix(in oklab, var(--surface) 92%, var(--primary) 8%) 100%);
-      box-shadow:var(--shadow);
-    }
-    .header h1 { font-size:clamp(1.9rem, 3vw, 2.9rem); font-weight:700; letter-spacing:-.06em; }
-    .header p { font-size:.92rem; color:var(--muted); margin-top:.25rem; }
+    .shell { max-width:1320px; }
     .actions { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.72rem 1rem; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); text-decoration:none; box-shadow:var(--shadow-soft); font-weight:600; cursor:pointer; transition:transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease; }
-    .btn:hover { transform:translateY(-1px); background:color-mix(in oklab, var(--surface-2) 72%, var(--primary) 28%); border-color:color-mix(in oklab, var(--border) 60%, var(--primary) 40%); }
+
+    .card { padding:1.25rem; }
     .btn-danger { color:var(--danger); border-color:color-mix(in oklab, var(--danger) 40%, var(--border)); background:color-mix(in oklab, var(--danger) 6%, transparent); box-shadow:none; padding:.4rem .58rem; font-weight:700; }
     .btn-edit { color:var(--primary); border-color:color-mix(in oklab, var(--primary) 40%, var(--border)); background:color-mix(in oklab, var(--primary) 6%, transparent); box-shadow:none; padding:.4rem .58rem; font-weight:700; }
     .btn-edit:hover,
@@ -57,18 +28,19 @@
       transform:translateY(-1px);
     }
     .btn-attach {
-      color:var(--accent);
-      border-color:color-mix(in oklab, var(--accent) 38%, var(--border));
-      background:color-mix(in oklab, var(--accent) 7%, transparent);
+      color:var(--primary);
+      border-color:color-mix(in oklab, var(--primary) 32%, var(--border));
+      background:color-mix(in oklab, var(--primary) 6%, transparent);
       box-shadow:none;
       padding:.35rem .52rem;
       min-width:1.95rem;
       font-weight:700;
     }
+    .btn-attach svg { width:14px; height:14px; }
     .btn-attach:hover,
     .btn-attach:focus-visible {
-      background:color-mix(in oklab, var(--accent) 14%, var(--surface));
-      border-color:color-mix(in oklab, var(--accent) 34%, var(--border));
+      background:color-mix(in oklab, var(--primary) 12%, var(--surface));
+      border-color:color-mix(in oklab, var(--primary) 34%, var(--border));
       transform:translateY(-1px);
     }
     .btn-danger:hover,
@@ -77,41 +49,23 @@
       border-color:color-mix(in oklab, var(--danger) 32%, var(--border));
       transform:translateY(-1px);
     }
-    .btn:active { transform:translateY(1px); box-shadow:none; }
-    .btn-icon { height:42px; padding:0; border-radius:999px; gap:0; overflow:hidden; transition:padding .18s ease; }
-    .btn-icon .icon-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; flex:0 0 42px; }
-    .btn-icon .icon-label { display:inline-block; max-width:0; opacity:0; overflow:hidden; white-space:nowrap; font-size:.85rem; font-weight:600; transition:max-width .18s ease, opacity .18s ease; }
-    .btn-icon:hover { padding-right:.9rem; transition-delay:.2s; }
-    .btn-icon:focus-visible { padding-right:.9rem; }
-    .btn-icon:hover .icon-label { max-width:160px; opacity:1; transition-delay:.2s; }
-    .btn-icon:focus-visible .icon-label { max-width:160px; opacity:1; }
-    .user-chip {
-      display:inline-flex; align-items:center; justify-content:center;
-      width:42px; height:42px; border-radius:50%;
-      background:color-mix(in oklab, var(--primary) 22%, var(--surface));
-      border:1px solid var(--border);
-      font-size:.92rem; font-weight:700; color:var(--primary); cursor:default;
-    }
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; box-shadow:var(--shadow-soft); backdrop-filter:blur(14px); }
+
     .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1rem; }
-    .card-label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:.55rem; }
-    .kpi-value { font-size:clamp(1.4rem, 2vw, 2.2rem); font-weight:700; letter-spacing:-.08em; line-height:.92; }
+    .kpi-value { font-size:clamp(1.4rem, 2vw, 2.2rem); letter-spacing:-.08em; line-height:.92; margin:0; }
     .kpi-sub { font-size:.8rem; color:var(--muted); margin-top:.5rem; }
-    .positive { color:#437a22; }
-    .negative { color:var(--danger); }
-    .muted { color:var(--muted); }
-    .pill { display:inline-flex; padding:.2rem .5rem; border-radius:9999px; background:color-mix(in oklab,var(--primary) 10%,var(--surface)); color:var(--primary); font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; white-space:nowrap; }
-    .pill.onetime { background:color-mix(in oklab,var(--danger) 10%,var(--surface)); color:var(--danger); }
-    .table-wrap { overflow-x:auto; border-radius:calc(var(--radius) - .25rem); }
+    .positive { color:var(--success); }
+
     .chart-wrap { position:relative; height:300px; }
+    .pill.t-transfer { background:color-mix(in oklab, var(--muted) 12%, var(--surface)); color:var(--muted); }
+    .pill.t-in { background:color-mix(in oklab, var(--success) 12%, var(--surface)); color:var(--success); }
+    .pill.t-out { background:color-mix(in oklab, var(--danger) 10%, var(--surface)); color:var(--danger); }
     #records-table-wrap { max-height:460px; overflow-y:auto; }
     #records-table-wrap th {
       position:sticky; top:0; z-index:2;
       background:var(--bg-accent);
     }
-    table { width:100%; min-width:980px; border-collapse:separate; border-spacing:0; font-size:.89rem; table-layout:fixed; }
-    th { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); padding:.72rem .85rem; border-bottom:1px solid var(--border); text-align:left; white-space:normal; background:color-mix(in oklab, var(--surface) 82%, var(--bg-accent) 18%); }
-    td { padding:.8rem .85rem; border-bottom:1px solid var(--border); white-space:normal; word-break:break-word; overflow-wrap:anywhere; vertical-align:middle; }
+    table { min-width:980px; table-layout:fixed; font-size:.89rem; }
+    td { white-space:normal; word-break:break-word; overflow-wrap:anywhere; vertical-align:middle; }
     th.col-type, td.col-type { width:9rem; }
     th.col-date, td.col-date { width:11.5rem; white-space:nowrap; }
     th.col-account, td.col-account { width:9.5rem; }
@@ -124,19 +78,13 @@
     table.recurring-table th.col-amount, table.recurring-table td.col-amount { width:7rem; white-space:nowrap; }
     table.recurring-table th.col-recurring, table.recurring-table td.col-recurring { width:9.5rem; white-space:nowrap; }
     table.recurring-table th.col-actions, table.recurring-table td.col-actions { width:11rem; white-space:nowrap; }
-    tbody tr:last-child td { border-bottom:none; }
     td.col-actions { vertical-align:middle; }
     .actions-cell { display:flex; gap:.15rem; align-items:center; justify-content:flex-end; flex-wrap:nowrap; white-space:nowrap; }
     .actions-cell form { margin:0; display:inline-flex; align-items:center; }
     .actions-cell .btn { white-space:nowrap; width:auto; }
-    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:200; padding:1rem; opacity:0; pointer-events:none; transition:opacity .18s ease; }
-    .overlay.open { opacity:1; pointer-events:auto; }
-    .modal { background:color-mix(in oklab, var(--surface) 92%, white 8%); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; transform:translateY(12px) scale(.98); transition:transform .18s ease; box-shadow:0 12px 40px rgba(0,0,0,.18); }
-    .overlay.open .modal { transform:translateY(0) scale(1); }
-    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-    .form-grid { display:grid; gap:.85rem; }
-    .field { display:grid; gap:.3rem; }
-    .field label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); }
+
+    .modal { background:color-mix(in oklab, var(--surface) 92%, white 8%); padding:1.5rem; max-width:460px; }
+
     .help { font-size:.78rem; color:var(--muted); }
     .attachment-link { font-size:.76rem; color:var(--primary); text-decoration:none; font-weight:600; }
     .attachment-link:hover, .attachment-link:focus-visible { text-decoration:underline; }
@@ -157,9 +105,7 @@
       color:var(--muted);
       text-align:center;
     }
-    input, select, button { font:inherit; color:inherit; }
-    input, select { width:100%; min-height:44px; padding:.7rem .9rem; line-height:1.35; border-radius:.8rem; border:1px solid var(--border); background:var(--surface-2); font-size:.92rem; transition:border-color .12s ease, box-shadow .12s ease, background .12s ease; }
-    input:focus, select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent); background:color-mix(in oklab, var(--surface-2) 60%, var(--primary) 6%); }
+
     .month-filter { display:flex; gap:.45rem; align-items:center; margin-left:auto; }
     .month-filter label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); }
     .month-filter select { min-height:40px; padding:.45rem .7rem; border-radius:.7rem; border:1px solid var(--border); background:var(--surface-2); }
@@ -169,11 +115,8 @@
       .kpi-grid .card:nth-child(1), .kpi-grid .card:nth-child(2), .kpi-grid .card:nth-child(3) { grid-column:auto; }
     }
     @media (max-width: 640px) {
-      .shell { padding:1rem .9rem 1.8rem; }
       .header { padding:1rem; }
       .kpi-grid { grid-template-columns:1fr; }
-      .btn { width:100%; }
-      .btn-icon { width:42px; }
       .month-filter { width:100%; margin-left:0; }
       .month-filter select, .month-filter input { width:100%; }
       table { min-width:0; font-size:.82rem; }
@@ -181,7 +124,7 @@
       th.col-actions, td.col-actions { width:auto; }
     }
     @media (max-width: 760px) {
-      .table-wrap { overflow:visible; }
+      .table-wrap { overflow:visible; border-radius:0; }
       #records-table-wrap { max-height:none; overflow-y:visible; }
       .table-wrap table,
       .table-wrap tbody,
@@ -200,7 +143,6 @@
         border-radius:.9rem;
         margin-bottom:.65rem;
         background:color-mix(in oklab, var(--surface) 86%, white 14%);
-        box-shadow:var(--shadow-soft);
         padding:.35rem;
       }
       .table-wrap td {
@@ -241,33 +183,35 @@
         width:auto;
       }
     }
-    ::selection { background:color-mix(in oklab, var(--primary) 26%, transparent); }
-    :focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:.25rem; }
-    ::-webkit-scrollbar { width:10px; height:10px; }
-    ::-webkit-scrollbar-thumb { background:color-mix(in oklab, var(--muted) 38%, transparent); border-radius:999px; border:2px solid transparent; background-clip:content-box; }
-    ::-webkit-scrollbar-track { background:transparent; }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
-    }
-  </style>
+
+    /* server-driven device overrides (on top of responsive breakpoints) */
+    html[data-device="mobile"] .kpi-grid { grid-template-columns:1fr; }
+    html[data-device="mobile"] .kpi-grid .card:nth-child(1),
+    html[data-device="mobile"] .kpi-grid .card:nth-child(2),
+    html[data-device="mobile"] .kpi-grid .card:nth-child(3),
+    html[data-device="mobile"] .kpi-grid .card:nth-child(4) { grid-column:auto; }
+    html[data-device="mobile"] .month-filter { width:100%; margin-left:0; }
+    html[data-device="mobile"] .month-filter select,
+    html[data-device="mobile"] .month-filter input { width:100%; }
+    </style>
 </head>
 <body>
   <div class="shell">
     <header class="header">
       <div>
-        <h1>Movimientos de ingresos y gastos</h1>
-        <p>Registro de movimientos manuales y ejecuciones recurrentes</p>
+        <h1>{{ t('exp.title') }}</h1>
+        <p>{{ t('exp.subtitle') }}</p>
       </div>
       <div class="actions">
-        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="Ajustes del perfil">{{ (username or '?')[0] | upper }}</button>
-        <a class="btn btn-icon" href="." aria-label="Volver al dashboard">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">Dashboard</span>
+        <button class="user-chip profile-trigger" type="button" title="{{ username }}" aria-label="{{ t('profile.title') }}">{{ (username or '?')[0] | upper }}</button>
+        <a class="btn btn-icon hide-mobile" href="." aria-label="{{ t('nav.back.dashboard') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span><span class="icon-label">{{ t('nav.dashboard') }}</span>
         </a>
-        <a class="btn btn-icon" href="calendar" aria-label="Calendario">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">Calendario</span>
+        <a class="btn btn-icon hide-mobile" href="calendar" aria-label="{{ t('nav.calendar') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span><span class="icon-label">{{ t('nav.calendar') }}</span>
         </a>
-        <a class="btn btn-icon" href="loans" aria-label="Simulador de hipoteca">
-          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">Hipoteca</span>
+        <a class="btn btn-icon hide-mobile" href="loans" aria-label="{{ t('nav.mortgage') }}">
+          <span class="icon-glyph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg></span><span class="icon-label">{{ t('nav.mortgage') }}</span>
         </a>
       </div>
     </header>
@@ -275,38 +219,34 @@
     {% if period_balance is not defined %}{% set period_balance = period_earned - period_spent %}{% endif %}
     <div class="kpi-grid">
       <div class="card">
-        <div class="card-label">Ingresos</div>
+        <div class="card-label">{{ t('exp.kpi.income') }}</div>
         <div class="kpi-value positive" id="kpi-income">+{{ default_currency_sym }}{{ '%.2f'|format(period_earned) }}</div>
-        <div class="kpi-sub">{{ selected_period_label }}</div>
       </div>
       <div class="card">
-        <div class="card-label">Gastos</div>
+        <div class="card-label">{{ t('exp.kpi.expense') }}</div>
         <div class="kpi-value negative" id="kpi-expense">-{{ default_currency_sym }}{{ '%.2f'|format(period_spent) }}</div>
-        <div class="kpi-sub">{{ selected_period_label }}</div>
       </div>
       <div class="card">
-        <div class="card-label">Balance</div>
+        <div class="card-label">{{ t('exp.kpi.balance') }}</div>
         <div class="kpi-value {{ 'positive' if period_balance >= 0 else 'negative' }}" id="kpi-balance">{% if period_balance >= 0 %}+{% else %}-{% endif %}{{ default_currency_sym }}{{ '%.2f'|format(period_balance|abs) }}</div>
-        <div class="kpi-sub">{{ selected_period_label }}</div>
       </div>
       <div class="card">
-        <div class="card-label">Movimientos</div>
+        <div class="card-label">{{ t('exp.kpi.movements') }} · {{ selected_period_label }}</div>
         <div class="kpi-value" id="kpi-movements">{{ records|length }}</div>
-        <div class="kpi-sub">{{ selected_period_label }}</div>
       </div>
     </div>
 
     <div class="card">
       <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-        <button class="btn" id="open-income-modal-history">+ Añadir ingreso</button>
-        <button class="btn" id="open-expense-modal-history">+ Añadir gasto</button>
-        <button class="btn" id="open-transfer-modal-history">+ Nueva transferencia</button>
+        <button class="btn" id="open-income-modal-history">{{ t('exp.add.income') }}</button>
+        <button class="btn" id="open-expense-modal-history">{{ t('exp.add.expense') }}</button>
+        <button class="btn" id="open-transfer-modal-history">{{ t('exp.add.transfer') }}</button>
         <form class="month-filter" method="get" action="expenses/history" id="history-filter-form">
-          <label for="history-search">Buscar</label>
-          <input id="history-search" name="q" type="search" placeholder="Buscar por concepto o notas…" value="{{ q }}" autocomplete="off">
-          <label for="month-filter">Mes</label>
+          <label for="history-search">{{ t('exp.search') }}</label>
+          <input id="history-search" name="q" type="search" placeholder="{{ t('exp.search.placeholder') }}" value="{{ q }}" autocomplete="off">
+          <label for="month-filter">{{ t('exp.month') }}</label>
           <select id="month-filter" name="month" onchange="this.form.submit()">
-            <option value="" {{ '' if selected_month else 'selected' }}>Todos</option>
+            <option value="" {{ '' if selected_month else 'selected' }}>{{ t('exp.month.all') }}</option>
             {% for period in available_months %}
             <option value="{{ period.value }}" {{ 'selected' if period.value == selected_month else '' }}>{{ period.label }}</option>
             {% endfor %}
@@ -316,38 +256,38 @@
       <div class="table-wrap" id="records-table-wrap">
         <table>
           <thead>
-            <tr><th class="col-type">Tipo</th><th class="col-date">Fecha</th><th class="col-account">Cuenta</th><th>Concepto</th><th class="col-amount">Importe</th><th class="col-recurring">Categoría</th><th class="col-actions"></th></tr>
+            <tr><th class="col-type">{{ t('exp.col.type') }}</th><th class="col-date">{{ t('exp.col.date') }}</th><th class="col-account">{{ t('exp.col.account') }}</th><th>{{ t('exp.col.concept') }}</th><th class="col-amount">{{ t('exp.col.amount') }}</th><th class="col-recurring">{{ t('exp.col.category') }}</th><th class="col-actions"></th></tr>
           </thead>
           <tbody id="records-tbody">
             {% for row in records %}
             <tr data-search="{{ (row.name ~ ' ' ~ row.notes)|lower }}" data-type="{{ row.type }}" data-amount="{{ row.amount }}" data-category="{{ row.category or '' }}">
-              <td class="col-type" data-label="Tipo">
+              <td class="col-type" data-label="{{ t('exp.col.type') }}">
                 {% if row.type == 'transfer' %}
-                <span class="pill" style="background:color-mix(in oklab, var(--accent) 14%, var(--surface));color:var(--accent)">Transferencia</span>
+                <span class="pill t-transfer">{{ t('exp.type.transfer') }}</span>
                 {% else %}
-                <span class="pill" style="background:color-mix(in oklab, var({{ 'success' if row.type == 'income' else 'danger' }}) 12%, var(--surface))">{{ 'Ingreso' if row.type == 'income' else 'Gasto' }}</span>
+                <span class="pill {{ 't-in' if row.type == 'income' else 't-out' }}">{{ t('exp.type.income') if row.type == 'income' else t('exp.type.expense') }}</span>
                 {% endif %}
               </td>
-              <td class="col-date" data-label="Fecha">{{ row.timestamp.strftime('%d %b %Y · %H:%M') }}</td>
-              <td class="col-account" data-label="Cuenta">{% if row.type == 'transfer' %}{{ row.from_account }} → {{ row.to_account }}{% else %}{{ row.account }}{% endif %}</td>
-              <td data-label="Concepto">
+              <td class="col-date" data-label="{{ t('exp.col.date') }}">{{ row.timestamp.strftime('%d %b %Y · %H:%M') }}</td>
+              <td class="col-account" data-label="{{ t('exp.col.account') }}">{% if row.type == 'transfer' %}{{ row.from_account }} → {{ row.to_account }}{% else %}{{ row.account }}{% endif %}</td>
+              <td data-label="{{ t('exp.col.concept') }}">
                 <div>{{ row.name }}</div>
                 {% if row.attachment_path %}
                 <div style="margin-top:.25rem">
                   <a class="attachment-link" href="{{ base_path(request) }}{{ row.attachment_path }}" target="_blank" rel="noopener">
-                    Ver adjunto{% if row.attachment_name %}: {{ row.attachment_name }}{% endif %}
+                    {{ t('exp.view.attachment') }}{% if row.attachment_name %}: {{ row.attachment_name }}{% endif %}
                   </a>
                 </div>
                 {% endif %}
               </td>
-              <td class="col-amount" data-label="Importe">{{ row.currency_sym }}{{ '%.2f'|format(row.amount) }}</td>
-              <td class="col-recurring" data-label="Categoría">{% if row.type == 'expense' %}<span class="pill">{{ row.category or 'Sin categoría' }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="col-amount" data-label="{{ t('exp.col.amount') }}">{{ row.currency_sym }}{{ '%.2f'|format(row.amount) }}</td>
+              <td class="col-recurring" data-label="{{ t('exp.col.category') }}">{% if row.type == 'expense' %}<span class="pill">{{ row.category or t('exp.no.category') }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
               <td class="col-actions">
                 <div class="actions-cell">
                   {% if row.type == 'transfer' %}
                   <form action="transfer-records/{{ row.id }}/delete" method="post">
                     <input type="hidden" name="next" value="{{ return_url }}">
-                    <button class="btn btn-danger" type="submit" onclick="return confirm('¿Deshacer esta transferencia? Se devolverá el importe a la cuenta de origen.')">Deshacer</button>
+                    <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.undo.transfer.confirm') }}')">{{ t('exp.undo') }}</button>
                   </form>
                   {% else %}
                   {% set att_ext = (row.attachment_path or '')|lower %}
@@ -357,8 +297,8 @@
                     data-record-attachment-type="{{ row.type }}"
                     data-record-attachment-path="{{ base_path(request) }}{{ row.attachment_path or '' }}"
                     data-record-attachment-name="{{ row.attachment_name or '' }}"
-                    aria-label="{{ 'Ver adjunto' if row.attachment_path else 'Añadir adjunto' }}"
-                    title="{{ 'Ver adjunto' if row.attachment_path else 'Añadir adjunto' }}">{{ '📷' if att_is_img else ('Ver' if row.attachment_path else '+') }}</button>
+                    aria-label="{{ t('exp.view.attachment') if row.attachment_path else t('exp.add.attachment') }}"
+                    title="{{ t('exp.view.attachment') if row.attachment_path else t('exp.add.attachment') }}">{% if att_is_img %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>{% elif row.attachment_path %}{{ t('exp.view') }}{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>{% endif %}</button>
                   <button class="btn btn-edit" type="button"
                     data-record-edit-id="{{ row.id }}"
                     data-record-edit-type="{{ row.type }}"
@@ -368,9 +308,9 @@
                     data-record-edit-notes="{{ row.notes }}"
                     data-record-edit-category="{{ row.category or '' }}"
                     data-record-edit-attachment-path="{{ base_path(request) }}{{ row.attachment_path or '' }}"
-                    data-record-edit-attachment-name="{{ row.attachment_name or '' }}">Editar</button>
+                    data-record-edit-attachment-name="{{ row.attachment_name or '' }}">{{ t('exp.edit') }}</button>
                   <form action="{{ 'income' if row.type == 'income' else 'expense' }}-records/{{ row.id }}/delete" method="post">
-                    <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar este {{ 'ingreso' if row.type == 'income' else 'gasto' }} del histórico? Se {{ 'devolverá' if row.type == 'income' else 'devolverá' }} el importe al efectivo de la cuenta.')">Eliminar</button>
+                    <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.delete.income.confirm') if row.type == 'income' else t('exp.delete.expense.confirm') }}')">{{ t('exp.delete') }}</button>
                   </form>
                   {% endif %}
                 </div>
@@ -378,11 +318,11 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">{% if q or selected_month %}No hay movimientos que coincidan con los filtros seleccionados.{% else %}Todavía no hay movimientos registrados. Usa los botones arriba para añadirlos.{% endif %}</td>
+              <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">{% if q or selected_month %}{{ t('exp.empty.filtered') }}{% else %}{{ t('exp.empty.none') }}{% endif %}</td>
             </tr>
             {% endfor %}
             <tr id="records-no-match" style="display:none">
-              <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">No hay movimientos que coincidan con la búsqueda.</td>
+              <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">{{ t('exp.empty.search') }}</td>
             </tr>
           </tbody>
         </table>
@@ -392,62 +332,85 @@
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
         <div>
-          <h2 style="font-size:1.18rem;letter-spacing:-.02em">Gasto por categoría</h2>
-          <p class="muted" style="font-size:.82rem">Distribución de los gastos según los filtros aplicados</p>
+          <h2 style="font-size:1.18rem;letter-spacing:-.02em">{{ t('exp.chart.title') }}</h2>
+          <p class="muted" style="font-size:.82rem">{{ t('exp.chart.subtitle') }}</p>
         </div>
       </div>
       <div class="chart-wrap">
         <canvas id="categoryChart"></canvas>
-        <p id="categoryChartEmpty" class="muted" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:0 1rem;font-size:.84rem">No hay gastos para mostrar con los filtros actuales.</p>
+        <p id="categoryChartEmpty" class="muted" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:0 1rem;font-size:.84rem">{{ t('exp.chart.empty') }}</p>
       </div>
     </div>
+
+  <nav class="mobilenav" aria-label="{{ t('apps.title') }}">
+    <a class="mobilenav-item" href="./">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>{{ t('nav.dashboard') }}</span>
+    </a>
+    <a class="mobilenav-item active" href="expenses/history" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span>{{ t('nav.movements') }}</span>
+    </a>
+    <a class="mobilenav-item" href="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>{{ t('nav.calendar') }}</span>
+    </a>
+    <a class="mobilenav-item" href="loans">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="2" width="16" height="20" rx="2"></rect><rect x="7" y="5" width="10" height="4" rx="1"></rect><line x1="8" y1="13" x2="8.01" y2="13"></line><line x1="12" y1="13" x2="12.01" y2="13"></line><line x1="16" y1="13" x2="16.01" y2="13"></line><line x1="8" y1="17" x2="8.01" y2="17"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><line x1="16" y1="17" x2="16.01" y2="17"></line></svg>
+      <span>{{ t('nav.mortgage') }}</span>
+    </a>
+    <button class="mobilenav-item" type="button" data-apps-trigger>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+      <span>{{ t('apps.title') }}</span>
+    </button>
+  </nav>
 
   <!-- modal: income creation -->
   <div class="overlay" id="income-overlay-history" role="dialog" aria-modal="true" aria-labelledby="income-modal-title-history">
     <div class="modal" style="max-width:460px">
       <div class="modal-header">
-        <h2 id="income-modal-title-history">Añadir ingreso</h2>
-        <button class="btn btn-icon btn-ghost" id="close-income-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="income-modal-title-history">{{ t('exp.income.title') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-income-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="incomes" method="post" id="income-form-history" enctype="multipart/form-data">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="income-account-id-history">Cuenta</label>
+            <label for="income-account-id-history">{{ t('exp.field.account') }}</label>
             <select id="income-account-id-history" name="account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="income-name-history">Concepto</label>
-            <input id="income-name-history" name="name" placeholder="Dividendo, salario, interés…" required>
+            <label for="income-name-history">{{ t('exp.field.concept') }}</label>
+            <input id="income-name-history" name="name" placeholder="{{ t('exp.income.concept.placeholder') }}" required>
           </div>
           <div class="field">
-            <label for="income-amount-history">Importe</label>
+            <label for="income-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="income-amount-history" name="amount" type="number" step="0.01" min="0.01" placeholder="1500.00" required>
           </div>
           <div class="field">
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
               <input type="checkbox" id="income-recurring-history" name="recurring" value="on" style="width:auto;min-height:auto;margin:0">
-              Marcar como recurrente mensual
+              {{ t('exp.recurring.label') }}
             </label>
           </div>
           <div class="field" id="income-day-wrap-history" style="display:none">
-            <label for="income-day-history">Día del mes</label>
+            <label for="income-day-history">{{ t('exp.field.day') }}</label>
             <input id="income-day-history" name="day_of_month" type="number" step="1" min="1" max="31" placeholder="5">
-            <span class="help">Ese día se añadirá el ingreso al efectivo de la cuenta seleccionada.</span>
+            <span class="help">{{ t('exp.income.day.help') }}</span>
           </div>
           <div class="field">
             <label for="income-notes-history">Notas</label>
-            <input id="income-notes-history" name="notes" placeholder="Opcional">
+            <input id="income-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
           <div class="field">
-            <label for="income-attachment-history">Adjunto (ticket, factura, etc.)</label>
+            <label for="income-attachment-history">{{ t('exp.attachment.label') }}</label>
             <input id="income-attachment-history" name="attachment" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.xlsx,.docx">
-            <span class="help">Solo para movimientos puntuales. Máximo 8 MB.</span>
+            <span class="help">{{ t('exp.attachment.help') }}</span>
           </div>
-          <span class="help">Si no marcas recurrente, el ingreso se registra y añade ahora mismo.</span>
-          <button class="btn btn-primary" type="submit">Guardar ingreso</button>
+          <span class="help">{{ t('exp.income.help') }}</span>
+          <button class="btn btn-primary" type="submit">{{ t('exp.save.income') }}</button>
         </div>
       </form>
     </div>
@@ -457,48 +420,48 @@
   <div class="overlay" id="expense-overlay-history" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title-history">
     <div class="modal" style="max-width:460px">
       <div class="modal-header">
-        <h2 id="expense-modal-title-history">Añadir gasto</h2>
-        <button class="btn btn-icon btn-ghost" id="close-expense-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="expense-modal-title-history">{{ t('exp.expense.title') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-expense-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="expenses" method="post" id="expense-form-history" enctype="multipart/form-data">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="expense-account-id-history">Cuenta</label>
+            <label for="expense-account-id-history">{{ t('exp.field.account') }}</label>
             <select id="expense-account-id-history" name="account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="expense-name-history">Concepto</label>
-            <input id="expense-name-history" name="name" placeholder="Alquiler, luz, internet…" required>
+            <label for="expense-name-history">{{ t('exp.field.concept') }}</label>
+            <input id="expense-name-history" name="name" placeholder="{{ t('exp.expense.concept.placeholder') }}" required>
           </div>
           <div class="field">
-            <label for="expense-amount-history">Importe</label>
+            <label for="expense-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="expense-amount-history" name="amount" type="number" step="0.01" min="0.01" placeholder="850.00" required>
           </div>
           <div class="field">
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
               <input type="checkbox" id="expense-recurring-history" name="recurring" value="on" style="width:auto;min-height:auto;margin:0">
-              Marcar como recurrente mensual
+              {{ t('exp.recurring.label') }}
             </label>
           </div>
           <div class="field" id="expense-day-wrap-history" style="display:none">
-            <label for="expense-day-history">Día del mes</label>
+            <label for="expense-day-history">{{ t('exp.field.day') }}</label>
             <input id="expense-day-history" name="day_of_month" type="number" step="1" min="1" max="31" placeholder="5">
-            <span class="help">Ese día se descontará del efectivo de la cuenta seleccionada.</span>
+            <span class="help">{{ t('exp.expense.day.help') }}</span>
           </div>
           <div class="field">
             <label for="expense-notes-history">Notas</label>
-            <input id="expense-notes-history" name="notes" placeholder="Opcional">
+            <input id="expense-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
           <div class="field">
-            <label for="expense-attachment-history">Adjunto (ticket, factura, etc.)</label>
+            <label for="expense-attachment-history">{{ t('exp.attachment.label') }}</label>
             <input id="expense-attachment-history" name="attachment" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.xlsx,.docx">
-            <span class="help">Solo para movimientos puntuales. Máximo 8 MB.</span>
+            <span class="help">{{ t('exp.attachment.help') }}</span>
           </div>
-          <span class="help">Si no marcas recurrente, el gasto se registra y descuenta ahora mismo.</span>
-          <button class="btn btn-primary" type="submit">Guardar gasto</button>
+          <span class="help">{{ t('exp.expense.help') }}</span>
+          <button class="btn btn-primary" type="submit">{{ t('exp.save.expense') }}</button>
         </div>
       </form>
     </div>
@@ -508,45 +471,45 @@
   <div class="overlay" id="transfer-overlay-history" role="dialog" aria-modal="true" aria-labelledby="transfer-modal-title-history">
     <div class="modal" style="max-width:440px">
       <div class="modal-header">
-        <h2 id="transfer-modal-title-history">Nueva transferencia</h2>
-        <button class="btn btn-icon btn-ghost" id="close-transfer-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="transfer-modal-title-history">{{ t('exp.transfer.title') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-transfer-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="transfers" method="post" id="transfer-form-history">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="transfer-from-account-history">Cuenta de origen</label>
+            <label for="transfer-from-account-history">{{ t('exp.from.account') }}</label>
             <select id="transfer-from-account-history" name="from_account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="transfer-to-account-history">Cuenta de destino</label>
+            <label for="transfer-to-account-history">{{ t('exp.to.account') }}</label>
             <select id="transfer-to-account-history" name="to_account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="transfer-amount-history">Importe</label>
+            <label for="transfer-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="transfer-amount-history" name="amount" type="number" step="0.01" min="0.01" placeholder="500.00" required>
           </div>
           <div class="field">
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
               <input type="checkbox" id="transfer-recurring-history" name="recurring" value="on" style="width:auto;min-height:auto;margin:0">
-              Programar como recurrente mensual
+              {{ t('exp.transfer.recurring.label') }}
             </label>
           </div>
           <div class="field" id="transfer-day-wrap-history" style="display:none">
-            <label for="transfer-day-history">Día del mes</label>
+            <label for="transfer-day-history">{{ t('exp.field.day') }}</label>
             <input id="transfer-day-history" name="day_of_month" type="number" step="1" min="1" max="31" placeholder="5">
-            <span class="help">Ese día se moverá el efectivo entre las cuentas seleccionadas.</span>
+            <span class="help">{{ t('exp.transfer.day.help') }}</span>
           </div>
           <div class="field">
             <label for="transfer-notes-history">Notas</label>
-            <input id="transfer-notes-history" name="notes" placeholder="Opcional">
+            <input id="transfer-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
-          <span class="help">Si no marcas recurrente, el efectivo se mueve ahora mismo entre las cuentas.</span>
-          <button class="btn btn-primary" type="submit" style="margin-top:.25rem">Transferir</button>
+          <span class="help">{{ t('exp.transfer.help') }}</span>
+          <button class="btn btn-primary" type="submit" style="margin-top:.25rem">{{ t('exp.transfer.submit') }}</button>
         </div>
       </form>
     </div>
@@ -555,37 +518,37 @@
   <div class="overlay" id="record-edit-overlay" role="dialog" aria-modal="true" aria-labelledby="record-edit-modal-title">
     <div class="modal">
       <div class="modal-header">
-        <h2 id="record-edit-modal-title">Editar gasto</h2>
-        <button class="btn btn-icon btn-ghost" id="close-record-edit-modal" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="record-edit-modal-title">{{ t('exp.edit.expense.title') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-record-edit-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form id="record-edit-form" action="" method="post" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="field">
-            <label for="record-edit-account-id">Cuenta</label>
+            <label for="record-edit-account-id">{{ t('exp.field.account') }}</label>
             <select id="record-edit-account-id" name="account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="record-edit-name">Concepto</label>
+            <label for="record-edit-name">{{ t('exp.field.concept') }}</label>
             <input id="record-edit-name" name="name" required>
           </div>
           <div class="field">
-            <label for="record-edit-amount">Importe</label>
+            <label for="record-edit-amount">{{ t('exp.field.amount') }}</label>
             <input id="record-edit-amount" name="amount" type="number" step="0.01" min="0.01" required>
           </div>
           <div class="field" id="record-edit-category-wrap" style="display:none">
-            <label for="record-edit-category">Categoría</label>
+            <label for="record-edit-category">{{ t('exp.field.category') }}</label>
             <select id="record-edit-category" name="category">
               {% for cat in expense_categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
             <label for="record-edit-notes">Notas</label>
-            <input id="record-edit-notes" name="notes" placeholder="Opcional">
+            <input id="record-edit-notes" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
           <div class="field" id="record-edit-current-attachment-wrap" style="display:none">
-            <span class="help">Adjunto actual: <a id="record-edit-current-attachment-link" class="attachment-link" href="#" target="_blank" rel="noopener">Ver archivo</a></span>
+            <span class="help">{{ t('exp.edit.current.attachment') }} <a id="record-edit-current-attachment-link" class="attachment-link" href="#" target="_blank" rel="noopener">{{ t('exp.view.file') }}</a></span>
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;text-transform:none;letter-spacing:normal;font-weight:500">
               <input type="checkbox" id="record-edit-remove-attachment" name="remove_attachment" value="on" style="width:auto;min-height:auto;margin:0">
               Quitar adjunto actual
@@ -594,9 +557,9 @@
           <div class="field">
             <label for="record-edit-attachment">Reemplazar adjunto</label>
             <input id="record-edit-attachment" name="attachment" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.xlsx,.docx">
-            <span class="help">Opcional. Si subes uno nuevo, sustituye el anterior.</span>
+            <span class="help">{{ t('exp.edit.replace.help') }}</span>
           </div>
-          <button class="btn" type="submit">Guardar cambios</button>
+          <button class="btn" type="submit">{{ t('exp.edit.save') }}</button>
         </div>
       </form>
     </div>
@@ -605,34 +568,34 @@
   <div class="overlay" id="record-attachment-overlay" role="dialog" aria-modal="true" aria-labelledby="record-attachment-modal-title">
     <div class="modal" style="max-width:520px">
       <div class="modal-header">
-        <h2 id="record-attachment-modal-title">Adjunto del movimiento</h2>
-        <button class="btn btn-icon btn-ghost" id="close-record-attachment-modal" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="record-attachment-modal-title">{{ t('exp.attachment.title') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-record-attachment-modal" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <div class="form-grid">
         <div id="record-attachment-preview-wrap" class="field" style="display:none">
-          <label>Archivo actual</label>
-          <img id="record-attachment-preview-image" class="attachment-preview" alt="Vista previa del adjunto" style="display:none">
-          <a id="record-attachment-preview-link" class="attachment-link" href="#" target="_blank" rel="noopener">Abrir archivo</a>
+          <label>{{ t('exp.attachment.current.file') }}</label>
+          <img id="record-attachment-preview-image" class="attachment-preview" alt="{{ t('exp.attachment.preview') }}" style="display:none">
+          <a id="record-attachment-preview-link" class="attachment-link" href="#" target="_blank" rel="noopener">{{ t('exp.attachment.open') }}</a>
         </div>
-        <div id="record-attachment-empty" class="attachment-empty">Este movimiento no tiene adjunto todavía.</div>
+        <div id="record-attachment-empty" class="attachment-empty">{{ t('exp.attachment.empty') }}</div>
 
         <form id="record-attachment-upload-form" method="post" action="records/attachment" enctype="multipart/form-data">
           <input type="hidden" id="record-attachment-upload-type" name="record_type" value="">
           <input type="hidden" id="record-attachment-upload-id" name="record_id" value="">
           <input type="hidden" id="record-attachment-upload-next" name="next" value="/expenses/history">
           <div class="field">
-            <label for="record-attachment-file">Subir o reemplazar adjunto</label>
+            <label for="record-attachment-file">{{ t('exp.attachment.upload') }}</label>
             <input id="record-attachment-file" name="attachment" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.xlsx,.docx" required>
-            <span class="help">Máximo 8 MB.</span>
+            <span class="help">{{ t('exp.attachment.max') }}</span>
           </div>
-          <button class="btn" type="submit">Guardar adjunto</button>
+          <button class="btn" type="submit">{{ t('exp.attachment.save') }}</button>
         </form>
 
         <form id="record-attachment-delete-form" method="post" action="records/attachment/delete" style="display:none">
           <input type="hidden" id="record-attachment-delete-type" name="record_type" value="">
           <input type="hidden" id="record-attachment-delete-id" name="record_id" value="">
           <input type="hidden" id="record-attachment-delete-next" name="next" value="/expenses/history">
-          <button class="btn btn-danger" type="submit" onclick="return confirm('¿Borrar el adjunto de este movimiento?')">Borrar adjunto</button>
+          <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.attachment.delete.confirm') }}')">{{ t('exp.attachment.delete') }}</button>
         </form>
       </div>
     </div>
@@ -640,31 +603,31 @@
 
   <div class="card" style="margin-top:1rem">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-      <h2 style="font-size:1.18rem;letter-spacing:-.02em">Movimientos recurrentes</h2>
-      <span class="muted" style="font-size:.84rem">Ingresos, gastos y transferencias que se ejecutan el día indicado del mes</span>
+      <h2 style="font-size:1.18rem;letter-spacing:-.02em">{{ t('exp.recurring.title') }}</h2>
+      <span class="muted" style="font-size:.84rem">{{ t('exp.recurring.subtitle') }}</span>
     </div>
     <div class="table-wrap">
       <table class="recurring-table">
         <thead>
-          <tr><th class="col-type">Tipo</th><th class="col-account">Cuenta</th><th>Concepto</th><th class="col-amount">Importe</th><th class="col-recurring">Día</th><th class="col-recurring">Última ejecución</th><th class="col-actions"></th></tr>
+          <tr><th class="col-type">{{ t('exp.col.type') }}</th><th class="col-account">{{ t('exp.col.account') }}</th><th>{{ t('exp.col.concept') }}</th><th class="col-amount">{{ t('exp.col.amount') }}</th><th class="col-recurring">{{ t('exp.col.day') }}</th><th class="col-recurring">{{ t('exp.col.last.run') }}</th><th class="col-actions"></th></tr>
         </thead>
         <tbody>
           {% set all_recurring = recurring_incomes + recurring_expenses + recurring_transfers %}
           {% set sorted_recurring = all_recurring | sort(attribute='day') %}
           {% for row in sorted_recurring %}
           <tr>
-            <td class="col-type" data-label="Tipo">
+            <td class="col-type" data-label="{{ t('exp.col.type') }}">
               {% if row.type == 'transfer' %}
-              <span class="pill" style="background:color-mix(in oklab, var(--accent) 14%, var(--surface));color:var(--accent)">Transferencia</span>
+              <span class="pill t-transfer">{{ t('exp.type.transfer') }}</span>
               {% else %}
-              <span class="pill" style="background:color-mix(in oklab, var({{ 'success' if row.type == 'income' else 'danger' }}) 12%, var(--surface))">{{ 'Ingreso' if row.type == 'income' else 'Gasto' }}</span>
+              <span class="pill {{ 't-in' if row.type == 'income' else 't-out' }}">{{ t('exp.type.income') if row.type == 'income' else t('exp.type.expense') }}</span>
               {% endif %}
             </td>
-            <td class="col-account" data-label="Cuenta">{% if row.type == 'transfer' %}{{ row.from_account }} → {{ row.to_account }}{% else %}{{ row.account }}{% endif %}</td>
-            <td data-label="Concepto">{{ row.name }}</td>
-            <td class="col-amount" data-label="Importe">{{ row.currency_sym }}{{ '%.2f'|format(row.amount) }}</td>
-            <td class="col-recurring" data-label="Día">{{ row.day }}</td>
-            <td class="col-recurring" data-label="Última ejecución">{{ row.last_executed_period or 'Nunca' }}</td>
+            <td class="col-account" data-label="{{ t('exp.col.account') }}">{% if row.type == 'transfer' %}{{ row.from_account }} → {{ row.to_account }}{% else %}{{ row.account }}{% endif %}</td>
+            <td data-label="{{ t('exp.col.concept') }}">{{ row.name }}</td>
+            <td class="col-amount" data-label="{{ t('exp.col.amount') }}">{{ row.currency_sym }}{{ '%.2f'|format(row.amount) }}</td>
+            <td class="col-recurring" data-label="{{ t('exp.col.day') }}">{{ row.day }}</td>
+            <td class="col-recurring" data-label="{{ t('exp.col.last.run') }}">{{ row.last_executed_period or t('exp.never') }}</td>
             <td class="col-actions">
               <div class="actions-cell">
                 {% if row.type == 'transfer' %}
@@ -674,10 +637,10 @@
                   data-transfer-schedule-to-account-id="{{ row.to_account_id }}"
                   data-transfer-schedule-amount="{{ row.amount }}"
                   data-transfer-schedule-day="{{ row.day }}"
-                  data-transfer-schedule-notes="{{ row.notes }}">Editar</button>
+                  data-transfer-schedule-notes="{{ row.notes }}">{{ t('exp.edit') }}</button>
                 <form action="transfers/{{ row.id }}/delete" method="post">
                   <input type="hidden" name="next" value="{{ return_url }}">
-                  <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar esta transferencia recurrente?')">Eliminar</button>
+                  <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.recurring.delete.transfer') }}')">{{ t('exp.delete') }}</button>
                 </form>
                 {% elif row.type == 'income' %}
                 <button class="btn btn-edit" type="button"
@@ -686,10 +649,10 @@
                   data-income-schedule-name="{{ row.name }}"
                   data-income-schedule-amount="{{ row.amount }}"
                   data-income-schedule-day="{{ row.day }}"
-                  data-income-schedule-notes="{{ row.notes }}">Editar</button>
+                  data-income-schedule-notes="{{ row.notes }}">{{ t('exp.edit') }}</button>
                 <form action="incomes/{{ row.id }}/delete" method="post">
                   <input type="hidden" name="next" value="{{ return_url }}">
-                  <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar este ingreso recurrente?')">Eliminar</button>
+                  <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.recurring.delete.income') }}')">{{ t('exp.delete') }}</button>
                 </form>
                 {% else %}
                 <button class="btn btn-edit" type="button"
@@ -699,10 +662,10 @@
                   data-expense-schedule-amount="{{ row.amount }}"
                   data-expense-schedule-day="{{ row.day }}"
                   data-expense-schedule-notes="{{ row.notes }}"
-                  data-expense-schedule-category="{{ row.category }}">Editar</button>
+                  data-expense-schedule-category="{{ row.category }}">{{ t('exp.edit') }}</button>
                 <form action="expenses/{{ row.id }}/delete" method="post">
                   <input type="hidden" name="next" value="{{ return_url }}">
-                  <button class="btn btn-danger" type="submit" onclick="return confirm('¿Eliminar este gasto recurrente?')">Eliminar</button>
+                  <button class="btn btn-danger" type="submit" onclick="return confirm('{{ t('exp.recurring.delete.expense') }}')">{{ t('exp.delete') }}</button>
                 </form>
                 {% endif %}
               </div>
@@ -710,7 +673,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">No hay movimientos recurrentes activos. Marca un ingreso, gasto o transferencia como recurrente para programarlo.</td>
+            <td colspan="7" class="muted" style="padding:1rem .8rem;text-align:center">{{ t('exp.recurring.empty') }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -733,41 +696,41 @@
   <div class="overlay" id="expense-schedule-edit-overlay-history" role="dialog" aria-modal="true" aria-labelledby="expense-schedule-edit-modal-title-history">
     <div class="modal" style="max-width:460px">
       <div class="modal-header">
-        <h2 id="expense-schedule-edit-modal-title-history">Editar gasto recurrente</h2>
-        <button class="btn btn-icon btn-ghost" id="close-expense-schedule-edit-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="expense-schedule-edit-modal-title-history">{{ t('exp.edit.recurring.expense') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-expense-schedule-edit-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="" method="post" id="expense-schedule-edit-form-history">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="expense-schedule-edit-account-id-history">Cuenta</label>
+            <label for="expense-schedule-edit-account-id-history">{{ t('exp.field.account') }}</label>
             <select id="expense-schedule-edit-account-id-history" name="account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="expense-schedule-edit-name-history">Concepto</label>
+            <label for="expense-schedule-edit-name-history">{{ t('exp.field.concept') }}</label>
             <input id="expense-schedule-edit-name-history" name="name" required>
           </div>
           <div class="field">
-            <label for="expense-schedule-edit-amount-history">Importe</label>
+            <label for="expense-schedule-edit-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="expense-schedule-edit-amount-history" name="amount" type="number" step="0.01" min="0.01" required>
           </div>
           <div class="field">
-            <label for="expense-schedule-edit-day-history">Día del mes</label>
+            <label for="expense-schedule-edit-day-history">{{ t('exp.field.day') }}</label>
             <input id="expense-schedule-edit-day-history" name="day_of_month" type="number" step="1" min="1" max="31" required>
           </div>
           <div class="field">
-            <label for="expense-schedule-edit-category-history">Categoría</label>
+            <label for="expense-schedule-edit-category-history">{{ t('exp.field.category') }}</label>
             <select id="expense-schedule-edit-category-history" name="category">
               {% for cat in expense_categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
             <label for="expense-schedule-edit-notes-history">Notas</label>
-            <input id="expense-schedule-edit-notes-history" name="notes" placeholder="Opcional">
+            <input id="expense-schedule-edit-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
-          <button class="btn" type="submit">Guardar cambios</button>
+          <button class="btn" type="submit">{{ t('exp.edit.save') }}</button>
         </div>
       </form>
     </div>
@@ -776,35 +739,35 @@
   <div class="overlay" id="income-schedule-edit-overlay-history" role="dialog" aria-modal="true" aria-labelledby="income-schedule-edit-modal-title-history">
     <div class="modal" style="max-width:460px">
       <div class="modal-header">
-        <h2 id="income-schedule-edit-modal-title-history">Editar ingreso recurrente</h2>
-        <button class="btn btn-icon btn-ghost" id="close-income-schedule-edit-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="income-schedule-edit-modal-title-history">{{ t('exp.edit.recurring.income') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-income-schedule-edit-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="" method="post" id="income-schedule-edit-form-history">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="income-schedule-edit-account-id-history">Cuenta</label>
+            <label for="income-schedule-edit-account-id-history">{{ t('exp.field.account') }}</label>
             <select id="income-schedule-edit-account-id-history" name="account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="income-schedule-edit-name-history">Concepto</label>
+            <label for="income-schedule-edit-name-history">{{ t('exp.field.concept') }}</label>
             <input id="income-schedule-edit-name-history" name="name" required>
           </div>
           <div class="field">
-            <label for="income-schedule-edit-amount-history">Importe</label>
+            <label for="income-schedule-edit-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="income-schedule-edit-amount-history" name="amount" type="number" step="0.01" min="0.01" required>
           </div>
           <div class="field">
-            <label for="income-schedule-edit-day-history">Día del mes</label>
+            <label for="income-schedule-edit-day-history">{{ t('exp.field.day') }}</label>
             <input id="income-schedule-edit-day-history" name="day_of_month" type="number" step="1" min="1" max="31" required>
           </div>
           <div class="field">
             <label for="income-schedule-edit-notes-history">Notas</label>
-            <input id="income-schedule-edit-notes-history" name="notes" placeholder="Opcional">
+            <input id="income-schedule-edit-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
-          <button class="btn" type="submit">Guardar cambios</button>
+          <button class="btn" type="submit">{{ t('exp.edit.save') }}</button>
         </div>
       </form>
     </div>
@@ -814,37 +777,37 @@
   <div class="overlay" id="transfer-schedule-edit-overlay-history" role="dialog" aria-modal="true" aria-labelledby="transfer-schedule-edit-modal-title-history">
     <div class="modal" style="max-width:460px">
       <div class="modal-header">
-        <h2 id="transfer-schedule-edit-modal-title-history">Editar transferencia recurrente</h2>
-        <button class="btn btn-icon btn-ghost" id="close-transfer-schedule-edit-modal-history" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="transfer-schedule-edit-modal-title-history">{{ t('exp.edit.recurring.transfer') }}</h2>
+        <button class="btn btn-icon btn-ghost" id="close-transfer-schedule-edit-modal-history" type="button" aria-label="{{ t('apps.close') }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <form action="" method="post" id="transfer-schedule-edit-form-history">
         <input type="hidden" name="next" value="{{ return_url }}">
         <div class="form-grid">
           <div class="field">
-            <label for="transfer-schedule-edit-from-account-id-history">Cuenta de origen</label>
+            <label for="transfer-schedule-edit-from-account-id-history">{{ t('exp.from.account') }}</label>
             <select id="transfer-schedule-edit-from-account-id-history" name="from_account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="transfer-schedule-edit-to-account-id-history">Cuenta de destino</label>
+            <label for="transfer-schedule-edit-to-account-id-history">{{ t('exp.to.account') }}</label>
             <select id="transfer-schedule-edit-to-account-id-history" name="to_account_id">
               {% for account in accounts %}<option value="{{ account.id }}">{{ account.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="field">
-            <label for="transfer-schedule-edit-amount-history">Importe</label>
+            <label for="transfer-schedule-edit-amount-history">{{ t('exp.field.amount') }}</label>
             <input id="transfer-schedule-edit-amount-history" name="amount" type="number" step="0.01" min="0.01" required>
           </div>
           <div class="field">
-            <label for="transfer-schedule-edit-day-history">Día del mes</label>
+            <label for="transfer-schedule-edit-day-history">{{ t('exp.field.day') }}</label>
             <input id="transfer-schedule-edit-day-history" name="day_of_month" type="number" step="1" min="1" max="31" required>
           </div>
           <div class="field">
             <label for="transfer-schedule-edit-notes-history">Notas</label>
-            <input id="transfer-schedule-edit-notes-history" name="notes" placeholder="Opcional">
+            <input id="transfer-schedule-edit-notes-history" name="notes" placeholder="{{ t('exp.notes.placeholder') }}">
           </div>
-          <button class="btn" type="submit">Guardar cambios</button>
+          <button class="btn" type="submit">{{ t('exp.edit.save') }}</button>
         </div>
       </form>
     </div>
@@ -852,6 +815,13 @@
 
   <script>
     (() => {
+      const I18N = {{ i18n_dict(language) | tojson }};
+      const t = (key, vars = {}) => {
+        let s = I18N[key] ?? key;
+        for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+        return s;
+      };
+
       // ── live text search filter (no page reload, no flash) ─────────────
       const searchInput = document.getElementById('history-search');
       const defSym = '{{ default_currency_sym }}';
@@ -865,7 +835,7 @@
 
       // ── spending by category chart ──────────────────────────────────────
       let categoryChart = null;
-      const categoryPalette = ['#01696f', '#006494', '#d97925', '#a12c7b', '#719b45', '#bd4b45', '#8b6f47', '#5d6470', '#c98a00', '#da7101'];
+      const categoryPalette = ['#0f6a63', '#45707e', '#66706b', '#8b6f47', '#5c8a5e', '#a15b55', '#93a0ad', '#b89b6a', '#7d8f85', '#4e6459'];
 
       function updateCategoryChart() {
         if (typeof Chart === 'undefined') return;  // Chart.js CDN not loaded
@@ -878,7 +848,7 @@
           if (tr.style.display === 'none') return;
           const amount = parseFloat(tr.dataset.amount || '0') || 0;
           if (amount <= 0) return;
-          const cat = (tr.dataset.category || '').trim() || 'Sin categoría';
+          const cat = (tr.dataset.category || '').trim() || t('exp.no.category');
           totals[cat] = (totals[cat] || 0) + amount;
         });
 
@@ -1027,7 +997,7 @@
         const to = document.getElementById('transfer-to-account-history').value;
         if (from === to) {
           e.preventDefault();
-          alert('La cuenta de origen y la de destino deben ser distintas.');
+          alert(t('exp.transfer.same.account'));
         }
       });
 
@@ -1051,7 +1021,7 @@
           document.getElementById('expense-schedule-edit-amount-history').value = btn.dataset.expenseScheduleAmount || '';
           document.getElementById('expense-schedule-edit-day-history').value = btn.dataset.expenseScheduleDay || '';
           document.getElementById('expense-schedule-edit-notes-history').value = btn.dataset.expenseScheduleNotes || '';
-          document.getElementById('expense-schedule-edit-category-history').value = btn.dataset.expenseScheduleCategory || 'Otros';
+          document.getElementById('expense-schedule-edit-category-history').value = btn.dataset.expenseScheduleCategory || t('exp.default.category');
           expenseScheduleEditOverlay?.classList.add('open');
         });
       });
@@ -1091,7 +1061,7 @@
         const to = document.getElementById('transfer-schedule-edit-to-account-id-history').value;
         if (from === to) {
           e.preventDefault();
-          alert('La cuenta de origen y la de destino deben ser distintas.');
+          alert(t('exp.transfer.same.account'));
         }
       });
 
@@ -1110,7 +1080,7 @@
           const type = btn.dataset.recordEditType;
           const endpoint = type === 'income' ? `income-records/${id}/edit` : `expense-records/${id}/edit`;
           document.getElementById('record-edit-form').action = endpoint;
-          document.getElementById('record-edit-modal-title').textContent = type === 'income' ? 'Editar ingreso' : 'Editar gasto';
+          document.getElementById('record-edit-modal-title').textContent = type === 'income' ? t('exp.edit.income.title') : t('exp.edit.expense.title');
           document.getElementById('record-edit-account-id').value = btn.dataset.recordEditAccountId;
           document.getElementById('record-edit-name').value = btn.dataset.recordEditName || '';
           document.getElementById('record-edit-amount').value = btn.dataset.recordEditAmount || '';
@@ -1121,7 +1091,7 @@
             const isExpense = type === 'expense';
             categoryWrap.style.display = isExpense ? '' : 'none';
             if (isExpense) {
-              categorySelect.value = btn.dataset.recordEditCategory || 'Otros';
+              categorySelect.value = btn.dataset.recordEditCategory || t('exp.default.category');
             }
           }
           if (attachmentRemove) {
@@ -1131,7 +1101,7 @@
             attachmentInput.value = '';
           }
           const existingAttachmentPath = btn.dataset.recordEditAttachmentPath || '';
-          const existingAttachmentName = btn.dataset.recordEditAttachmentName || 'Ver archivo';
+          const existingAttachmentName = btn.dataset.recordEditAttachmentName || t('exp.view.file');
           if (attachmentWrap && attachmentLink) {
             if (existingAttachmentPath) {
               attachmentLink.href = existingAttachmentPath;
@@ -1177,7 +1147,7 @@
           const id = btn.dataset.recordAttachmentId;
           const type = btn.dataset.recordAttachmentType;
           const path = btn.dataset.recordAttachmentPath || '';
-          const name = btn.dataset.recordAttachmentName || 'Abrir archivo';
+          const name = btn.dataset.recordAttachmentName || t('exp.attachment.open');
 
           attachmentUploadType.value = type;
           attachmentUploadId.value = id;
@@ -1188,7 +1158,7 @@
           attachmentFileInput.value = '';
 
           if (path) {
-            attachmentTitle.textContent = 'Ver adjunto del movimiento';
+            attachmentTitle.textContent = t('exp.attachment.view.title');
             attachmentPreviewWrap.style.display = '';
             attachmentDeleteForm.style.display = '';
             attachmentEmpty.style.display = 'none';
@@ -1203,14 +1173,14 @@
               attachmentPreviewImage.style.display = 'none';
             }
           } else {
-            attachmentTitle.textContent = 'Añadir adjunto al movimiento';
+            attachmentTitle.textContent = t('exp.attachment.add.title');
             attachmentPreviewWrap.style.display = 'none';
             attachmentDeleteForm.style.display = 'none';
             attachmentEmpty.style.display = '';
             attachmentPreviewImage.removeAttribute('src');
             attachmentPreviewImage.style.display = 'none';
             attachmentPreviewLink.href = '#';
-            attachmentPreviewLink.textContent = 'Abrir archivo';
+            attachmentPreviewLink.textContent = t('exp.attachment.open');
           }
 
           openAttachmentModal();

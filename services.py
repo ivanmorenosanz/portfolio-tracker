@@ -1,10 +1,10 @@
 from calendar import monthrange
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from math import ceil
 from typing import Any, Callable, Optional
 import threading
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from config import DEFAULT_CURRENCY, MADRID_TZ, SNAPSHOT_INTERVAL_SECONDS, _categorize_expense, _to_madrid
@@ -236,6 +236,117 @@ def _next_market_day_on_or_after(d: datetime) -> datetime:
     while not _is_market_day(d):
         d = d + timedelta(days=1)
     return d
+
+
+def _previous_market_day_on_or_before(d: datetime) -> datetime:
+    """Return d if it is a market day, otherwise move back to the previous market day."""
+    while not _is_market_day(d):
+        d = d - timedelta(days=1)
+    return d
+
+
+def _is_nomina_concept(name: Optional[str]) -> bool:
+    """True when a recurring movement concept is payroll (Nómina / Nomina)."""
+    normalized = (name or "").strip().casefold().replace("ó", "o")
+    return normalized == "nomina"
+
+
+def _configured_schedule_dt(day_of_month: int, year: int, month: int) -> datetime:
+    last_day = monthrange(year, month)[1]
+    due_day = min(day_of_month, last_day)
+    return datetime(year, month, due_day, 0, 0, 0, tzinfo=MADRID_TZ)
+
+
+def schedule_execution_date(
+    day_of_month: int,
+    year: int,
+    month: int,
+    concept_name: Optional[str] = None,
+) -> date:
+    """Calendar day when a recurring movement should run for the given month."""
+    configured_dt = _configured_schedule_dt(day_of_month, year, month)
+    if _is_nomina_concept(concept_name):
+        return _previous_market_day_on_or_before(configured_dt).date()
+    return _next_market_day_on_or_after(configured_dt).date()
+
+
+def schedule_fires_on_date(
+    day_of_month: int,
+    d: date,
+    concept_name: Optional[str] = None,
+) -> bool:
+    """True when a recurring movement is scheduled on calendar day `d`."""
+    for delta in (-1, 0, 1):
+        month, year = d.month + delta, d.year
+        while month < 1:
+            month += 12
+            year -= 1
+        while month > 12:
+            month -= 12
+            year += 1
+        if schedule_execution_date(day_of_month, year, month, concept_name) == d:
+            return True
+    return False
+
+
+def _pending_schedule_period(
+    day_of_month: int,
+    dt_madrid: datetime,
+    concept_name: Optional[str],
+    last_executed_period: Optional[str],
+) -> Optional[str]:
+    """Return the YYYY-MM period ready to execute, or None."""
+    if day_of_month < 1:
+        return None
+
+    today = dt_madrid.date()
+    year, month = dt_madrid.year, dt_madrid.month
+    pending: list[str] = []
+    for delta in range(-1, 3):
+        m, y = month + delta, year
+        while m < 1:
+            m += 12
+            y -= 1
+        while m > 12:
+            m -= 12
+            y += 1
+        period = f"{y}-{m:02d}"
+        if period == last_executed_period:
+            continue
+        # Never re-run periods older than the marker (prevents backward loops
+        # when the marker is ahead of an old pending period).
+        if last_executed_period and period < last_executed_period:
+            continue
+        if today >= schedule_execution_date(day_of_month, y, m, concept_name):
+            pending.append(period)
+
+    return min(pending) if pending else None
+
+
+def scheduled_dates_in_month(
+    day_of_month: int,
+    year: int,
+    month: int,
+    concept_name: Optional[str] = None,
+) -> list[date]:
+    """Effective execution dates that fall inside the given calendar month."""
+    dates: list[date] = []
+    for delta in (-1, 0, 1):
+        cfg_month, cfg_year = month + delta, year
+        while cfg_month < 1:
+            cfg_month += 12
+            cfg_year -= 1
+        while cfg_month > 12:
+            cfg_month -= 12
+            cfg_year += 1
+        fire_date = schedule_execution_date(day_of_month, cfg_year, cfg_month, concept_name)
+        if fire_date.year == year and fire_date.month == month:
+            dates.append(fire_date)
+    return dates
+
+
+def schedule_concept_name(schedule: Any) -> Optional[str]:
+    return getattr(schedule, "name", None) or getattr(schedule, "notes", None)
 
 
 def _is_due_contribution_day(day_of_month: int, dt_madrid: datetime, has_ticker: bool = False) -> bool:
@@ -483,27 +594,51 @@ def _run_scheduled_money_movements(
     schedule_cls: type,
     execute: Callable[[Session, Any, str], None],
 ) -> int:
-    """Run monthly recurring money-movement schedules once per calendar month."""
-    now_madrid = datetime.now(MADRID_TZ)
-    period = now_madrid.strftime("%Y-%m")
-    executed = 0
+    """Run monthly recurring money-movement schedules once per calendar month.
 
-    with SessionLocal() as db:
+    Concurrency-safe: opens the pass with SQLite BEGIN IMMEDIATE, taking the
+    exclusive write lock up-front. A second process starting simultaneously
+    gets 'database is locked' and skips this pass instead of double-running.
+    Each period's records + marker bump commit atomically.
+    """
+    now_madrid = datetime.now(MADRID_TZ)
+    executed = 0
+    db = SessionLocal()
+    try:
+        db.execute(text("BEGIN IMMEDIATE"))
         schedules = db.query(schedule_cls).filter(schedule_cls.enabled == 1).all()
         for schedule in schedules:
-            if schedule.last_executed_period == period:
-                continue
-            if not _is_due_contribution_day(schedule.day_of_month, now_madrid):
-                continue
-            try:
-                execute(db, schedule, period)
-                schedule.last_executed_period = period
-                executed += 1
-            except Exception as e:
-                print(f"[{kind.upper()}] scheduled {kind} {schedule.id} failed: {e}", flush=True)
-
-        if executed:
-            db.commit()
+            concept_name = schedule_concept_name(schedule)
+            # Process every still-pending period (oldest first).
+            while True:
+                period = _pending_schedule_period(
+                    schedule.day_of_month,
+                    now_madrid,
+                    concept_name,
+                    schedule.last_executed_period,
+                )
+                if not period:
+                    break
+                try:
+                    execute(db, schedule, period)
+                    schedule.last_executed_period = period
+                    executed += 1
+                except Exception as e:
+                    print(f"[{kind.upper()}] scheduled {kind} {schedule.id} failed: {e}", flush=True)
+                    break
+        db.commit()
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        msg = str(e)
+        if "locked" in msg.lower():
+            print(f"[{kind.upper()}] skipped: another instance holds the write lock", flush=True)
+        else:
+            print(f"[{kind.upper()}] run failed: {e}", flush=True)
+    finally:
+        db.close()
 
     return executed
 
