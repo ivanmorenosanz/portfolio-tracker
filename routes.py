@@ -573,6 +573,37 @@ def create_credit_card(
     return RedirectResponse(url="/expenses/history", status_code=303)
 
 
+@router.post("/credit-cards/{card_id}/edit")
+def edit_credit_card(
+    request: Request,
+    card_id: int,
+    name: str = Form(...),
+    account_id: int = Form(...),
+    card_type: str = Form("debit"),
+    settlement: Optional[str] = Form(None),
+    discount_pct: float = Form(0.0),
+    match_name: Optional[str] = Form(None),
+):
+    uid, redir = _require_auth(request)
+    if redir:
+        return redir
+    cleaned = name.strip()
+    if not cleaned or card_type not in ("debit", "credit"):
+        return RedirectResponse(url="/expenses/history", status_code=303)
+    with SessionLocal() as db:
+        card = db.query(CreditCard).filter(CreditCard.id == card_id, CreditCard.user_id == uid).first()
+        account_ok = db.query(Account).filter(Account.id == account_id, Account.user_id == uid).first()
+        if card and account_ok:
+            card.name = cleaned
+            card.account_id = account_id
+            card.card_type = card_type
+            card.settlement = settlement if card_type == "credit" and settlement in ("salary", None) else None
+            card.discount_pct = max(0.0, min(discount_pct, 100.0)) if card_type == "credit" else 0.0
+            card.match_name = (match_name or cleaned).strip().casefold()
+            db.commit()
+    return RedirectResponse(url="/expenses/history", status_code=303)
+
+
 @router.post("/credit-cards/{card_id}/delete")
 def delete_credit_card(request: Request, card_id: int):
     uid, redir = _require_auth(request)
@@ -1781,8 +1812,10 @@ def expense_history(
             .all()
         )
         pending_by_account = {aid: total or 0.0 for aid, total in pending_rows}
+        card_account_ids = {c.id: c.account_id for c in cards_rows}
         credit_cards_data = [{
             "id": c.id,
+            "account_id": c.account_id,
             "name": c.name,
             "account": account_names.get(c.account_id, "?"),
             "card_type": c.card_type,
@@ -1799,6 +1832,7 @@ def expense_history(
             "records": displayed_records,
             "accounts": db.query(Account).filter(Account.user_id == uid).order_by(Account.name).all(),
             "credit_cards": credit_cards_data,
+            "card_account_ids": card_account_ids,
             "card_accounts": sorted(account_names.items()),
             "total_spent": total_spent,
             "total_earned": total_earned,

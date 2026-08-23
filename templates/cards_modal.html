@@ -19,6 +19,7 @@
   .cards-field label { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
   .cards-field input, .cards-field select { width:100%; min-height:42px; padding:.58rem .9rem; border:1px solid var(--border); border-radius:.75rem; background:color-mix(in oklab,var(--surface-strong,#fffdf9) 66%,var(--surface-2) 34%); color:var(--text); font:inherit; }
   .cards-field small { color:var(--muted); font-size:.72rem; }
+  .cards-btn-edit { background:none; border:none; cursor:pointer; font-size:.95rem; margin-right:.3rem; }
   .cards-btn-danger { color:#c0392b; background:none; border:none; cursor:pointer; font-size:.95rem; }
   @media (max-width:520px) { .cards-modal { padding:1rem; } }
 </style>
@@ -64,8 +65,9 @@
               {% if c.discount_pct %}<span class="muted">(neto {{ default_currency_sym }}{{ '%.2f'|format(c.net_pending) }})</span>{% endif %}
             {% else %}—{% endif %}
           </td>
-          <td>
-            <form method="post" action="{{ base_path(request) }}/credit-cards/{{ c.id }}/delete" style="margin:0;">
+          <td style="white-space:nowrap;">
+            <button type="button" class="cards-btn-edit cards-trigger-edit" data-card='{{ c | tojson }}' data-account-id="{{ card_account_ids.get(c.id) if card_account_ids else '' }}" title="{{ t('cards.edit') }}">✎</button>
+            <form method="post" action="{{ base_path(request) }}/credit-cards/{{ c.id }}/delete" style="margin:0; display:inline;">
               <button type="submit" class="cards-btn-danger" title="{{ t('common.delete') }}">✕</button>
             </form>
           </td>
@@ -118,6 +120,48 @@
       </div>
       <button type="submit" class="profile-btn profile-btn-primary" style="justify-content:center;">{{ t('cards.add') }}</button>
     </form>
+
+    <form method="post" action="" id="card-edit-form" class="cards-form" style="display:none;">
+      <h3>{{ t('cards.edit') }}</h3>
+      <div class="cards-field">
+        <label>{{ t('cards.field.name') }}</label>
+        <input type="text" name="name" required maxlength="100">
+      </div>
+      <div class="cards-field">
+        <label>{{ t('cards.field.account') }}</label>
+        <select name="account_id" required>
+          {% for aid, aname in card_accounts %}
+          <option value="{{ aid }}">{{ aname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="cards-field">
+        <label>{{ t('cards.field.type') }}</label>
+        <select name="card_type" id="card-edit-type-select">
+          <option value="debit">{{ t('cards.type.debit') }}</option>
+          <option value="credit">{{ t('cards.type.credit') }}</option>
+        </select>
+      </div>
+      <div id="card-edit-credit-options" style="display:flex; flex-direction:column; gap:.65rem;">
+        <div class="cards-field">
+          <label>{{ t('cards.field.settlement') }}</label>
+          <select name="settlement">
+            <option value="salary">{{ t('cards.settle.salary_option') }}</option>
+            <option value="">{{ t('cards.settle.manual') }}</option>
+          </select>
+        </div>
+        <div class="cards-field">
+          <label>{{ t('cards.field.discount') }}</label>
+          <input type="number" name="discount_pct" min="0" max="100" step="0.5" value="0">
+          <small>p. ej. Cobee: 19% → un cargo de 100 € descuenta 81 € de la nómina</small>
+        </div>
+      </div>
+      <div class="cards-field">
+        <label>{{ t('cards.field.match') }}</label>
+        <input type="text" name="match_name" maxlength="100">
+      </div>
+      <button type="submit" class="profile-btn profile-btn-primary" style="justify-content:center;">{{ t('cards.save') }}</button>
+    </form>
   </div>
 </div>
 
@@ -140,5 +184,36 @@
     }
     typeSelect?.addEventListener('change', syncCreditOpts);
     syncCreditOpts();
+
+    // Edit card flow
+    const editForm = document.getElementById('card-edit-form');
+    const editTypeSelect = document.getElementById('card-edit-type-select');
+    const editCreditOpts = document.getElementById('card-edit-credit-options');
+    function syncEditCreditOpts() {
+      editCreditOpts.style.display = editTypeSelect?.value === 'credit' ? 'flex' : 'none';
+    }
+    editTypeSelect?.addEventListener('change', syncEditCreditOpts);
+    document.querySelectorAll('.cards-trigger-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        let card;
+        try { card = JSON.parse(btn.dataset.card); } catch { return; }
+        editForm.action = `${document.getElementById('cards-base')?.value || ''}/credit-cards/${card.id}/edit`;
+        editForm.querySelector('[name=name]').value = card.name;
+        const acctSel = editForm.querySelector('[name=account_id]');
+        // Prefer the explicit account id passed on the button, else match by name
+        const btnAcct = btn.dataset.accountId;
+        let matched = false;
+        [...acctSel.options].forEach(o => { if (btnAcct && o.value === String(btnAcct)) { acctSel.value = o.value; matched = true; } });
+        if (!matched) [...acctSel.options].forEach(o => { if (o.text === card.account) acctSel.value = o.value; });
+        editTypeSelect.value = card.card_type;
+        const settleSel = editForm.querySelector('[name=settlement]');
+        settleSel.value = (card.card_type === 'credit' && card.settlement === 'salary') ? 'salary' : '';
+        editForm.querySelector('[name=discount_pct]').value = card.discount_pct || 0;
+        editForm.querySelector('[name=match_name]').value = card.match_name || '';
+        syncEditCreditOpts();
+        editForm.style.display = 'grid';
+        editForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
   })();
 </script>
