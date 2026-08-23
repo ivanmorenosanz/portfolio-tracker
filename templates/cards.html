@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="{{ base_path(request) }}/">
-  <title>{{ t('cards.title', 'Tarjetas') }} · Portfolio Pi</title>
+  <title>{{ t('cards.title') }} · Portfolio Pi</title>
   <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
   <link rel="apple-touch-icon" href="static/favicon.svg">
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
@@ -35,28 +35,28 @@
   <div class="shell">
     <header class="header" style="padding:1rem;">
       <div class="header-copy">
-        <h1>{{ t('cards.title', 'Tarjetas') }}</h1>
-        <p>{{ t('cards.subtitle', 'Tarjetas de crédito/débito y cómo se cargan sus pagos.') }}</p>
+        <h1>{{ t('cards.title') }}</h1>
+        <p>{{ t('cards.subtitle') }}</p>
       </div>
       <div class="actions" style="display:flex; justify-content:flex-end; gap:.45rem;">
         <button class="user-chip profile-trigger" type="button">{{ (username or '?')[0] | upper }}</button>
-        <a class="btn btn-icon hide-mobile" href="."><span>{{ t('nav.dashboard', 'Inicio') }}</span></a>
-        <a class="btn btn-icon hide-mobile" href="expenses/history"><span>{{ t('nav.movements', 'Movimientos') }}</span></a>
+        <a class="btn btn-icon hide-mobile" href="."><span>{{ t('nav.dashboard') }}</span></a>
+        <a class="btn btn-icon hide-mobile" href="expenses/history"><span>{{ t('nav.movements') }}</span></a>
       </div>
     </header>
 
     <main class="layout">
       <section class="card">
-        <h2>{{ t('cards.your_cards', 'Tus tarjetas') }}</h2>
+        <h2>{{ t('cards.your_cards') }}</h2>
         {% if cards %}
         <div style="overflow:auto;">
           <table>
             <thead><tr>
-              <th>{{ t('cards.col.name', 'Nombre') }}</th>
-              <th>{{ t('cards.col.account', 'Cuenta') }}</th>
-              <th>{{ t('cards.col.type', 'Tipo') }}</th>
-              <th>{{ t('cards.col.settlement', 'Liquidación') }}</th>
-              <th class="num">{{ t('cards.col.pending', 'Pendiente') }}</th>
+              <th>{{ t('cards.col.name') }}</th>
+              <th>{{ t('cards.col.account') }}</th>
+              <th>{{ t('cards.col.type') }}</th>
+              <th>{{ t('cards.col.settlement') }}</th>
+              <th class="num">{{ t('cards.col.pending') }}</th>
               <th></th>
             </tr></thead>
             <tbody>
@@ -67,11 +67,11 @@
                 <td>{{ t('cards.type.' + c.card_type, c.card_type) }}</td>
                 <td>
                   {% if c.card_type == 'debit' %}
-                    {{ t('cards.settle.immediate', 'Inmediato') }}
+                    {{ t('cards.settle.immediate') }}
                   {% elif c.settlement == 'salary' %}
-                    {{ t('cards.settle.salary', 'Próxima nómina') }}{% if c.discount_pct %} (−{{ '%.0f'|format(c.discount_pct) }}%){% endif %}
+                    {{ t('cards.settle.salary') }}{% if c.discount_pct %} (−{{ '%.0f'|format(c.discount_pct) }}%){% endif %}
                   {% else %}
-                    {{ t('cards.settle.manual', 'Fin de mes') }}
+                    {{ t('cards.settle.manual') }}
                   {% endif %}
                 </td>
                 <td class="num">
@@ -91,19 +91,19 @@
           </table>
         </div>
         {% else %}
-        <p class="muted">{{ t('cards.empty', 'Aún no tienes tarjetas configuradas.') }}</p>
+        <p class="muted">{{ t('cards.empty') }}</p>
         {% endif %}
       </section>
 
       <section class="card">
-        <h2>{{ t('cards.add_new', 'Añadir tarjeta') }}</h2>
+        <h2>{{ t('cards.add_new') }}</h2>
         <form method="post" action="credit-cards" class="form-grid">
           <div class="field">
-            <label>{{ t('cards.field.name', 'Nombre de la tarjeta') }}</label>
+            <label>{{ t('cards.field.name') }}</label>
             <input type="text" name="name" required maxlength="100" placeholder="p. ej. Cobee">
           </div>
           <div class="field">
-            <label>{{ t('cards.field.account', 'Cuenta asociada') }}</label>
+            <label>{{ t('cards.field.account') }}</label>
             <select name="account_id" required>
               {% for aid, aname in accounts %}
               <option value="{{ aid }}">{{ aname }}</option>
@@ -111,31 +111,31 @@
             </select>
           </div>
           <div class="field">
-            <label>{{ t('cards.field.type', 'Tipo') }}</label>
+            <label>{{ t('cards.field.type') }}</label>
             <select name="card_type" id="card-type-select">
-              <option value="debit">{{ t('cards.type.debit', 'Débito — descuenta al pagar') }}</option>
-              <option value="credit">{{ t('cards.type.credit', 'Crédito — se liquida después') }}</option>
+              <option value="debit">{{ t('cards.type.debit') }}</option>
+              <option value="credit">{{ t('cards.type.credit') }}</option>
             </select>
           </div>
           <div id="credit-options" style="display:none; display:flex; flex-direction:column; gap:.7rem;">
             <div class="field">
-              <label>{{ t('cards.field.settlement', 'Cuándo se liquidan los cargos') }}</label>
+              <label>{{ t('cards.field.settlement') }}</label>
               <select name="settlement">
-                <option value="salary">{{ t('cards.settle.salary', 'Descuento de la próxima nómina') }}</option>
-                <option value="">{{ t('cards.settle.month_end', 'Fin de mes (manual)') }}</option>
+                <option value="salary">{{ t('cards.settle.salary') }}</option>
+                <option value="">{{ t('cards.settle.month_end') }}</option>
               </select>
             </div>
             <div class="field">
-              <label>{{ t('cards.field.discount', 'Descuento (%)') }}</label>
+              <label>{{ t('cards.field.discount') }}</label>
               <input type="number" name="discount_pct" min="0" max="100" step="0.5" value="0">
               <small>p. ej. Cobee: 19% → un cargo de 100 € descuenta 81 € de la nómina</small>
             </div>
           </div>
           <div class="field">
-            <label>{{ t('cards.field.match', 'Texto para reconocer los cargos') }}</label>
+            <label>{{ t('cards.field.match') }}</label>
             <input type="text" name="match_name" maxlength="100" placeholder="por defecto, el nombre de la tarjeta">
           </div>
-          <button type="submit" class="btn btn-primary">{{ t('cards.add', 'Añadir tarjeta') }}</button>
+          <button type="submit" class="btn btn-primary">{{ t('cards.add') }}</button>
         </form>
       </section>
     </main>
