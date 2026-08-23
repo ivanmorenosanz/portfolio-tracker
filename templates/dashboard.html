@@ -1909,9 +1909,16 @@
             // full portfolio cost. Carrying the last known cash forward keeps
             // the invested line continuous.
             const cashFilled = forwardFill(cashValues);
+            // Forward-fill each type-cost series too: at labels where a type has no
+            // snapshot, carry its last known cost forward instead of dropping to the
+            // (spike-prone) totalCost-cash fallback.
+            const fundCostsFilled = forwardFill(fundCosts);
+            const stockCostsFilled = forwardFill(stockCosts);
+            const etfCostsFilled = forwardFill(etfCosts);
+            const filledTypeSeries = [fundCostsFilled, stockCostsFilled, etfCostsFilled];
             const investedValues = labels.map((_, idx) => {
               if (hasTypeCosts) {
-                const available = typeCostSeries
+                const available = filledTypeSeries
                   .map(series => series[idx])
                   .filter(v => v !== null && v !== undefined && Number.isFinite(Number(v)));
                 if (available.length) return available.reduce((sum, value) => sum + Number(value), 0);
