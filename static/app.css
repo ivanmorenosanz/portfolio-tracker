@@ -458,3 +458,36 @@ tbody tr:hover { background: color-mix(in oklab, var(--primary) 7%, transparent)
   body.anim-enter .card { animation: none; }
   .shell { animation: none; }
 }
+
+
+/* ==========================================================================
+   v2 — unified page headers
+   All pages share .header-title > h1 (+ p). The app name on the dashboard
+   uses .app-brand to stand apart as the product identity.
+   ========================================================================== */
+.header-title { display:grid; gap:.4rem; max-width:640px; }
+.header-title h1 {
+  font-size: clamp(1.7rem, 2.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -.045em;
+  line-height: 1.02;
+}
+.header-title p { font-size:.9rem; color:var(--muted); }
+
+/* App brand (dashboard only) — distinct display treatment */
+.app-brand {
+  font-size: clamp(2.1rem, 3.4vw, 3.3rem);
+  font-weight: 800;
+  letter-spacing: -.07em;
+  line-height: .92;
+  background: linear-gradient(120deg,
+    var(--text) 0%,
+    color-mix(in oklab, var(--text) 72%, var(--primary)) 55%,
+    var(--primary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom:.08em;
+}
+.greeting { font-size:.82rem; color:var(--muted); letter-spacing:.02em; }
+.greeting strong { color:var(--text); }
