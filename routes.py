@@ -555,11 +555,11 @@ def create_credit_card(
         return redir
     cleaned = name.strip()
     if not cleaned or card_type not in ("debit", "credit"):
-        return RedirectResponse(url="/cards", status_code=303)
+        return RedirectResponse(url="/expenses/history", status_code=303)
     with SessionLocal() as db:
         account = db.query(Account).filter(Account.id == account_id, Account.user_id == uid).first()
         if not account:
-            return RedirectResponse(url="/cards", status_code=303)
+            return RedirectResponse(url="/expenses/history", status_code=303)
         db.add(CreditCard(
             user_id=uid,
             name=cleaned,
@@ -570,7 +570,7 @@ def create_credit_card(
             match_name=(match_name or cleaned).strip().casefold(),
         ))
         db.commit()
-    return RedirectResponse(url="/cards", status_code=303)
+    return RedirectResponse(url="/expenses/history", status_code=303)
 
 
 @router.post("/credit-cards/{card_id}/delete")
@@ -583,50 +583,7 @@ def delete_credit_card(request: Request, card_id: int):
         if card:
             db.delete(card)
             db.commit()
-    return RedirectResponse(url="/cards", status_code=303)
-
-
-@router.get("/cards")
-def cards_page(request: Request):
-    uid, redi = _require_auth(request)
-    if redi:
-        return redi
-    with SessionLocal() as db:
-        cards = (
-            db.query(CreditCard)
-            .filter(CreditCard.user_id == uid)
-            .order_by(CreditCard.name)
-            .all()
-        )
-        accounts = {a.id: a.name for a in db.query(Account).filter(Account.user_id == uid)}
-        # pending (unsettled) charge totals per card
-        pending_rows = (
-            db.query(ExpenseRecord.account_id, func.sum(ExpenseRecord.amount))
-            .filter(ExpenseRecord.user_id == uid, ExpenseRecord.settled == 0)
-            .group_by(ExpenseRecord.account_id)
-            .all()
-        )
-        pending_by_account = {aid: total for aid, total in pending_rows}
-    cards_data = []
-    for card in cards:
-        factor = 1.0 - card.discount_pct / 100.0
-        cards_data.append({
-            "id": card.id,
-            "name": card.name,
-            "account": accounts.get(card.account_id, "?"),
-            "card_type": card.card_type,
-            "settlement": card.settlement,
-            "discount_pct": card.discount_pct,
-            "pending": round(pending_by_account.get(card.account_id, 0.0) or 0.0, 2),
-            "net_pending": round((pending_by_account.get(card.account_id, 0.0) or 0.0) * factor, 2),
-        })
-    return templates.TemplateResponse(request, "cards.html", {
-        "request": request,
-        "username": current_username(request),
-        "language": current_language(request),
-        "cards": cards_data,
-        "accounts": sorted(accounts.items()),
-    })
+    return RedirectResponse(url="/expenses/history", status_code=303)
 
 
 @router.post("/accounts")
@@ -1809,12 +1766,40 @@ def expense_history(
             ("?" + "&".join(return_params)) if return_params else ""
         )
 
+        # Credit cards for the cards modal
+        cards_rows = (
+            db.query(CreditCard)
+            .filter(CreditCard.user_id == uid)
+            .order_by(CreditCard.name)
+            .all()
+        )
+        account_names = {a.id: a.name for a in db.query(Account).filter(Account.user_id == uid)}
+        pending_rows = (
+            db.query(ExpenseRecord.account_id, func.sum(ExpenseRecord.amount))
+            .filter(ExpenseRecord.user_id == uid, ExpenseRecord.settled == 0)
+            .group_by(ExpenseRecord.account_id)
+            .all()
+        )
+        pending_by_account = {aid: total or 0.0 for aid, total in pending_rows}
+        credit_cards_data = [{
+            "id": c.id,
+            "name": c.name,
+            "account": account_names.get(c.account_id, "?"),
+            "card_type": c.card_type,
+            "settlement": c.settlement,
+            "discount_pct": c.discount_pct,
+            "pending": round(pending_by_account.get(c.account_id, 0.0), 2),
+            "net_pending": round(pending_by_account.get(c.account_id, 0.0) * (1 - c.discount_pct / 100.0), 2),
+        } for c in cards_rows]
+
         return templates.TemplateResponse(request, "expenses_history.html", {
             "request": request,
             "username": current_username(request),
         "language": current_language(request),
             "records": displayed_records,
             "accounts": db.query(Account).filter(Account.user_id == uid).order_by(Account.name).all(),
+            "credit_cards": credit_cards_data,
+            "card_accounts": sorted(account_names.items()),
             "total_spent": total_spent,
             "total_earned": total_earned,
             "period_spent": period_spent,
