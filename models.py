@@ -29,6 +29,30 @@ class Account(Base):
     holdings: Mapped[list["Holding"]] = relationship(back_populates="account", cascade="all, delete-orphan")
 
 
+class CreditCard(Base):
+    """A payment card linked to a cash account.
+
+    card_type:
+      - 'debit': charges deduct cash immediately (default behaviour).
+      - 'credit': charges don't touch cash; they settle later.
+    settlement:
+      - 'salary': pending charges are deducted from the next Nómina income,
+        applying `discount_pct` (e.g. Cobee: 19% -> only 81% of the charge
+        is deducted).
+    match_name: lowercase substring used to recognise this card's charges
+        by merchant name (e.g. 'cobee').
+    """
+    __tablename__ = "credit_cards"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(String(100))
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    card_type: Mapped[str] = mapped_column(String(10), default="debit")     # debit|credit
+    settlement: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # salary|None
+    discount_pct: Mapped[float] = mapped_column(Float, default=0.0)         # 0-100
+    match_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+
 class Asset(Base):
     __tablename__ = "assets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -167,6 +191,10 @@ class ExpenseRecord(Base):
     category: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     # Cobee card charges start unsettled (0); settled when deducted from salary.
     settled: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Credit card that made this charge (NULL = paid with cash/debit).
+    credit_card_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("credit_cards.id"), nullable=True
+    )
 
 
 class IncomeSchedule(Base):

@@ -517,18 +517,34 @@ def _is_cobee_charge(name: Optional[str]) -> bool:
 COBEE_SALARY_FACTOR = 0.81  # charge minus 19% tax benefit when settled from salary
 
 
-def _settle_cobee_from_salary(
+def _match_credit_card(db: Session, user_id: int, name: str):
+    """Find an enabled credit-card config whose match_name appears in the charge name."""
+    from models import CreditCard
+    lname = (name or "").strip().casefold()
+    if not lname:
+        return None
+    cards = db.query(CreditCard).filter(CreditCard.user_id == user_id).all()
+    for card in cards:
+        match = (card.match_name or card.name or "").strip().casefold()
+        if match and match in lname:
+            return card
+    return None
+
+
+def _settle_card_from_salary(
     db: Session,
     *,
     user_id: int,
     salary_account_id: int,
 ) -> tuple[float, int]:
-    """Deduct pending Cobee charges from a freshly recorded salary.
+    """Deduct pending credit-card charges from a freshly recorded salary.
 
-    Each pending charge settles at 81% of its amount (100 € charge -> 81 €
-    deducted from the income, thanks to the card's 19% tax benefit).
+    Each pending charge settles at (100% - discount_pct)% of its amount
+    (e.g. 100 € charge with a 19% discount -> 81 € deducted from income).
     Returns (total deducted, number of charges settled).
     """
+    from models import CreditCard, ExpenseRecord
+
     pending = (
         db.query(ExpenseRecord)
         .filter(
@@ -537,13 +553,24 @@ def _settle_cobee_from_salary(
         )
         .all()
     )
+    # Keep only charges made with a configured salary-settled credit card.
+    cards = {c.id: c for c in db.query(CreditCard).filter(CreditCard.user_id == user_id).all()}
+    pending = [r for r in pending if r.credit_card_id in {
+        cid for cid, c in cards.items() if c.settlement == "salary"
+    }]
     if not pending:
         return 0.0, 0
-    total = _round_money(sum(r.amount for r in pending) * COBEE_SALARY_FACTOR)
+
+    total = 0.0
     for record in pending:
+        card = cards.get(record.credit_card_id)
+        factor = 1.0 - (card.discount_pct if card else 0.0) / 100.0
+        total += record.amount * factor
         record.settled = 1
+    total = _round_money(total)
+
     # Reduce the salary's cash impact by the settled total. The salary income
-    # itself was already credited in full; this pulls the cobee repayment out.
+    # itself was already credited in full; this pulls the card repayment out.
     if total > 0:
         _adjust_cash(db, user_id=user_id, account_id=salary_account_id, amount=-total)
     return total, len(pending)
@@ -568,12 +595,13 @@ def _execute_cash_flow(
 ) -> None:
     """Record a cash movement: expense (sign=-1) or income (sign=+1).
 
-    Cobee credit-card charges (name contains 'cobee') never touch a cash
-    account: they are recorded unsettled and later deducted from the next
-    salary income at 81% of the charge.
+    Credit-card charges matched via a configured card (match_name) never
+    touch a cash account: they are recorded unsettled and later deducted
+    from the next salary income minus the card's discount_pct.
     """
-    is_cobee = record_cls is ExpenseRecord and sign < 0 and _is_cobee_charge(name)
-    if is_cobee:
+    card = _match_credit_card(db, user_id, name) if (record_cls is ExpenseRecord and sign < 0) else None
+    is_card = card is not None
+    if is_card:
         account_currency = _get_account_currency(db, account_id)
     else:
         account_currency = _adjust_cash(
@@ -597,16 +625,17 @@ def _execute_cash_flow(
     )
     if record_cls is ExpenseRecord:
         record.category = category or _categorize_expense(name)
-        if is_cobee:
+        if is_card:
             record.settled = 0
+            record.credit_card_id = card.id
     db.add(record)
     db.flush()  # autoflush is off; make the new row visible to the queries below
 
-    # Salary income: settle any pending Cobee charges against it.
+    # Salary income: settle any pending credit-card charges against it.
     if record_cls is IncomeRecord and sign > 0 and _is_nomina_concept(name):
-        deducted, count = _settle_cobee_from_salary(db, user_id=user_id, salary_account_id=account_id)
+        deducted, count = _settle_card_from_salary(db, user_id=user_id, salary_account_id=account_id)
         if count:
-            extra = f" [Cobee: -{deducted:.2f} ({count} cargos)]"
+            extra = f" [Tarjeta: -{deducted:.2f} ({count} cargos)]"
             record.notes = ((record.notes or "") + extra).strip()
 
 

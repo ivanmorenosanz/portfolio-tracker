@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="{{ language|default('es') }}" data-device="{{ device_of(request) }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="{{ base_path(request) }}/">
+  <title>{{ t('cards.title', 'Tarjetas') }} · Portfolio Pi</title>
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+  <link rel="apple-touch-icon" href="static/favicon.svg">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/tailwind.css">
+  <link rel="stylesheet" href="static/app.css">
+  <style>
+    .shell { max-width:1100px; }
+    .header-copy h1 { font-size:clamp(1.9rem,3vw,2.9rem); letter-spacing:-.06em; line-height:.96; }
+    .header p { color:var(--muted); font-size:.94rem; max-width:64ch; }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,380px); gap:1rem; align-items:start; margin-top:1rem; }
+    .card { padding:1.1rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface); }
+    .card h2 { font-size:1.05rem; letter-spacing:-.03em; margin-bottom:.7rem; }
+    table { width:100%; font-size:.82rem; border-collapse:collapse; }
+    th { padding:.55rem .6rem; text-align:left; color:var(--muted); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; border-bottom:1px solid var(--border); }
+    td { padding:.6rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .muted { color:var(--muted); }
+    .form-grid { display:grid; gap:.7rem; }
+    .field label { display:block; font-size:.78rem; margin-bottom:.25rem; }
+    .field input, .field select { width:100%; padding:.5rem .6rem; border:1px solid var(--border); border-radius:.5rem; background:var(--surface-2, var(--surface)); color:var(--text); }
+    .field small { color:var(--muted); font-size:.72rem; }
+    .btn-danger { color:#c0392b; }
+    @media (max-width:900px) { .layout { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="header" style="padding:1rem;">
+      <div class="header-copy">
+        <h1>{{ t('cards.title', 'Tarjetas') }}</h1>
+        <p>{{ t('cards.subtitle', 'Tarjetas de crédito/débito y cómo se cargan sus pagos.') }}</p>
+      </div>
+      <div class="actions" style="display:flex; justify-content:flex-end; gap:.45rem;">
+        <button class="user-chip profile-trigger" type="button">{{ (username or '?')[0] | upper }}</button>
+        <a class="btn btn-icon hide-mobile" href="."><span>{{ t('nav.dashboard', 'Inicio') }}</span></a>
+        <a class="btn btn-icon hide-mobile" href="expenses/history"><span>{{ t('nav.movements', 'Movimientos') }}</span></a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>{{ t('cards.your_cards', 'Tus tarjetas') }}</h2>
+        {% if cards %}
+        <div style="overflow:auto;">
+          <table>
+            <thead><tr>
+              <th>{{ t('cards.col.name', 'Nombre') }}</th>
+              <th>{{ t('cards.col.account', 'Cuenta') }}</th>
+              <th>{{ t('cards.col.type', 'Tipo') }}</th>
+              <th>{{ t('cards.col.settlement', 'Liquidación') }}</th>
+              <th class="num">{{ t('cards.col.pending', 'Pendiente') }}</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              {% for c in cards %}
+              <tr>
+                <td>{{ c.name }}</td>
+                <td>{{ c.account }}</td>
+                <td>{{ t('cards.type.' + c.card_type, c.card_type) }}</td>
+                <td>
+                  {% if c.card_type == 'debit' %}
+                    {{ t('cards.settle.immediate', 'Inmediato') }}
+                  {% elif c.settlement == 'salary' %}
+                    {{ t('cards.settle.salary', 'Próxima nómina') }}{% if c.discount_pct %} (−{{ '%.0f'|format(c.discount_pct) }}%){% endif %}
+                  {% else %}
+                    {{ t('cards.settle.manual', 'Fin de mes') }}
+                  {% endif %}
+                </td>
+                <td class="num">
+                  {% if c.card_type == 'credit' and c.pending > 0 %}
+                    €{{ '%.2f'|format(c.pending) }}
+                    {% if c.discount_pct %}<span class="muted">(neto €{{ '%.2f'|format(c.net_pending) }})</span>{% endif %}
+                  {% else %}—{% endif %}
+                </td>
+                <td>
+                  <form method="post" action="credit-cards/{{ c.id }}/delete" style="margin:0;">
+                    <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="muted">{{ t('cards.empty', 'Aún no tienes tarjetas configuradas.') }}</p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <h2>{{ t('cards.add_new', 'Añadir tarjeta') }}</h2>
+        <form method="post" action="credit-cards" class="form-grid">
+          <div class="field">
+            <label>{{ t('cards.field.name', 'Nombre de la tarjeta') }}</label>
+            <input type="text" name="name" required maxlength="100" placeholder="p. ej. Cobee">
+          </div>
+          <div class="field">
+            <label>{{ t('cards.field.account', 'Cuenta asociada') }}</label>
+            <select name="account_id" required>
+              {% for aid, aname in accounts %}
+              <option value="{{ aid }}">{{ aname }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>{{ t('cards.field.type', 'Tipo') }}</label>
+            <select name="card_type" id="card-type-select">
+              <option value="debit">{{ t('cards.type.debit', 'Débito — descuenta al pagar') }}</option>
+              <option value="credit">{{ t('cards.type.credit', 'Crédito — se liquida después') }}</option>
+            </select>
+          </div>
+          <div id="credit-options" style="display:none; display:flex; flex-direction:column; gap:.7rem;">
+            <div class="field">
+              <label>{{ t('cards.field.settlement', 'Cuándo se liquidan los cargos') }}</label>
+              <select name="settlement">
+                <option value="salary">{{ t('cards.settle.salary', 'Descuento de la próxima nómina') }}</option>
+                <option value="">{{ t('cards.settle.month_end', 'Fin de mes (manual)') }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>{{ t('cards.field.discount', 'Descuento (%)') }}</label>
+              <input type="number" name="discount_pct" min="0" max="100" step="0.5" value="0">
+              <small>p. ej. Cobee: 19% → un cargo de 100 € descuenta 81 € de la nómina</small>
+            </div>
+          </div>
+          <div class="field">
+            <label>{{ t('cards.field.match', 'Texto para reconocer los cargos') }}</label>
+            <input type="text" name="match_name" maxlength="100" placeholder="por defecto, el nombre de la tarjeta">
+          </div>
+          <button type="submit" class="btn btn-primary">{{ t('cards.add', 'Añadir tarjeta') }}</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const typeSelect = document.getElementById('card-type-select');
+  const creditOpts = document.getElementById('credit-options');
+  function syncCreditOpts() {
+    creditOpts.style.display = typeSelect.value === 'credit' ? 'flex' : 'none';
+  }
+  typeSelect.addEventListener('change', syncCreditOpts);
+  syncCreditOpts();
+</script>
+</body>
+</html>

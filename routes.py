@@ -32,6 +32,7 @@ from config import (
 from database import SessionLocal
 from models import (
     Account,
+    CreditCard,
     Asset,
     AutoContribution,
     ExpenseRecord,
@@ -537,6 +538,95 @@ def change_profile_password(
 @router.get("/api/search-symbol")
 def search_symbol(q: str = Query(..., min_length=2)):
     return JSONResponse({"results": yahoo_symbol_search(q)})
+
+
+@router.post("/credit-cards")
+def create_credit_card(
+    request: Request,
+    name: str = Form(...),
+    account_id: int = Form(...),
+    card_type: str = Form("debit"),
+    settlement: Optional[str] = Form(None),
+    discount_pct: float = Form(0.0),
+    match_name: Optional[str] = Form(None),
+):
+    uid, redir = _require_auth(request)
+    if redir:
+        return redir
+    cleaned = name.strip()
+    if not cleaned or card_type not in ("debit", "credit"):
+        return RedirectResponse(url="/cards", status_code=303)
+    with SessionLocal() as db:
+        account = db.query(Account).filter(Account.id == account_id, Account.user_id == uid).first()
+        if not account:
+            return RedirectResponse(url="/cards", status_code=303)
+        db.add(CreditCard(
+            user_id=uid,
+            name=cleaned,
+            account_id=account_id,
+            card_type=card_type,
+            settlement=settlement if card_type == "credit" and settlement in ("salary", None) else None,
+            discount_pct=max(0.0, min(discount_pct, 100.0)) if card_type == "credit" else 0.0,
+            match_name=(match_name or cleaned).strip().casefold(),
+        ))
+        db.commit()
+    return RedirectResponse(url="/cards", status_code=303)
+
+
+@router.post("/credit-cards/{card_id}/delete")
+def delete_credit_card(request: Request, card_id: int):
+    uid, redir = _require_auth(request)
+    if redir:
+        return redir
+    with SessionLocal() as db:
+        card = db.query(CreditCard).filter(CreditCard.id == card_id, CreditCard.user_id == uid).first()
+        if card:
+            db.delete(card)
+            db.commit()
+    return RedirectResponse(url="/cards", status_code=303)
+
+
+@router.get("/cards")
+def cards_page(request: Request):
+    uid, redi = _require_auth(request)
+    if redi:
+        return redi
+    with SessionLocal() as db:
+        cards = (
+            db.query(CreditCard)
+            .filter(CreditCard.user_id == uid)
+            .order_by(CreditCard.name)
+            .all()
+        )
+        accounts = {a.id: a.name for a in db.query(Account).filter(Account.user_id == uid)}
+        # pending (unsettled) charge totals per card
+        pending_rows = (
+            db.query(ExpenseRecord.account_id, func.sum(ExpenseRecord.amount))
+            .filter(ExpenseRecord.user_id == uid, ExpenseRecord.settled == 0)
+            .group_by(ExpenseRecord.account_id)
+            .all()
+        )
+        pending_by_account = {aid: total for aid, total in pending_rows}
+    cards_data = []
+    for card in cards:
+        factor = 1.0 - card.discount_pct / 100.0
+        cards_data.append({
+            "id": card.id,
+            "name": card.name,
+            "account": accounts.get(card.account_id, "?"),
+            "card_type": card.card_type,
+            "settlement": card.settlement,
+            "discount_pct": card.discount_pct,
+            "pending": round(pending_by_account.get(card.account_id, 0.0) or 0.0, 2),
+            "net_pending": round((pending_by_account.get(card.account_id, 0.0) or 0.0) * factor, 2),
+        })
+    return templates.TemplateResponse(request, "cards.html", {
+        "request": request,
+        "username": current_username(request),
+        "language": current_language(request),
+        "cards": cards_data,
+        "accounts": sorted(accounts.items()),
+    })
 
 
 @router.post("/accounts")

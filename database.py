@@ -253,6 +253,25 @@ def ensure_schema():
                 conn.exec_driver_sql(
                     "ALTER TABLE expense_records ADD COLUMN settled INTEGER NOT NULL DEFAULT 1"
                 )
+            if "credit_card_id" not in er_cols:
+                conn.exec_driver_sql(
+                    "ALTER TABLE expense_records ADD COLUMN credit_card_id INTEGER REFERENCES credit_cards(id)"
+                )
+
+        # credit_cards table
+        if "credit_cards" not in tables:
+            conn.exec_driver_sql("""
+                CREATE TABLE credit_cards (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id      INTEGER NOT NULL REFERENCES users(id),
+                    name         VARCHAR(100) NOT NULL,
+                    account_id   INTEGER NOT NULL REFERENCES accounts(id),
+                    card_type    VARCHAR(10) NOT NULL DEFAULT 'debit',
+                    settlement   VARCHAR(20),
+                    discount_pct FLOAT NOT NULL DEFAULT 0,
+                    match_name   VARCHAR(100)
+                )
+            """)
 
         # income_schedules table
         if "income_schedules" not in tables:
